@@ -15,7 +15,7 @@
 
 ---
 
-## 5.1. Proje Özeti
+## Proje Özeti
 
 **KrediZeka**, bireylerin kredi başvurusu yapmadan önce kendi finansal risklerini ölçmelerini sağlayan, yapay zeka destekli modern bir web uygulamasıdır.
 
@@ -45,7 +45,7 @@ Geleneksel kredi değerlendirme süreçleri opak ve kullanıcıya kapalıdır. K
 
 ---
 
-## 5.2. Kullanılan AI Araçları
+## Kullanılan AI Araçları
 
 Bu proje geliştirilirken aşağıdaki yapay zekâ araçları kullanılmıştır:
 
@@ -63,7 +63,7 @@ Bu proje geliştirilirken aşağıdaki yapay zekâ araçları kullanılmıştır
 
 ---
 
-## 5.3. Prompt Kütüphanesi
+## Prompt Kütüphanesi
 
 Aşağıda proje geliştirme sürecinde kullanılan en etkili prompt örnekleri kategorilere göre listelenmiştir.
 
@@ -165,7 +165,7 @@ açılma/kapanma efekti. Her bölümün içeriği whitespace-pre-line ile format
 
 ---
 
-## 5.4. Kurulum ve Çalıştırma
+## Kurulum ve Çalıştırma
 
 ### Gereksinimler
 
@@ -237,7 +237,7 @@ cd backend && uvicorn main:app --host 0.0.0.0 --port 8000
 
 ---
 
-## 5.5. Gelecek Vizyonu
+## Gelecek Vizyonu
 
 ### Geliştirilebilecek AI Özellikleri
 

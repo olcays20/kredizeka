@@ -29,7 +29,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     if (form.tc_no.length !== 11) return toast.error('T.C. Kimlik No 11 hane olmalıdır.');
-    if (form.password.length < 1) return toast.error('Parola boş bırakılamaz.');
+    if (form.password.length < 6) return toast.error('Parola en az 6 karakter olmalıdır.');
 
     setLoading(true);
     try {
@@ -46,7 +46,10 @@ export default function LoginPage() {
       toast.success(`Hoş geldiniz, ${data.user.full_name}!`);
       navigate('/');
     } catch (err) {
-      toast.error(err.message);
+      const msg = err instanceof TypeError
+        ? 'Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.'
+        : (err.message || 'Beklenmeyen bir hata oluştu.');
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

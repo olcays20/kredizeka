@@ -59,7 +59,10 @@ export default function RiskReportPage() {
       setResult(data);
       toast.success('Analiz tamamlandı!', { id: 'analyze-toast' });
     } catch (err) {
-      toast.error(err.message || 'Sunucuya bağlanılamadı.', { id: 'analyze-toast' });
+      const msg = err instanceof TypeError
+        ? 'Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.'
+        : (err.message || 'Beklenmeyen bir hata oluştu.');
+      toast.error(msg, { id: 'analyze-toast' });
     } finally {
       setLoading(false);
     }

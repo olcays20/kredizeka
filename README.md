@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ KrediZeka
+# KrediZeka
 
 ### Makine Öğrenmesi Destekli Finansal Risk ve Kredi Asistanı
 
@@ -11,113 +11,167 @@
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-1.4-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white)](https://scikit-learn.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-**KrediZeka**, bireylerin kredi başvurusu yapmadan önce kendi finansal risklerini ölçmelerini sağlayan, yapay zeka destekli modern bir web uygulamasıdır. Random Forest algoritmasıyla eğitilmiş bir ML modeli, kullanıcının gelir, borç ve talep ettiği kredi tutarına göre 0–100 arası bir onaylanma skoru üretir ve kişiselleştirilmiş finansal tavsiyeler sunar.
-
-[Demo](#-ekran-görüntüleri) • [Kurulum](#-kurulum-ve-çalıştırma) • [API Dokümantasyonu](#-api-dokümantasyonu) • [Katkı Sağlama](#-katkı-sağlama)
-
 </div>
 
 ---
 
-## ✨ Özellikler
+## 5.1. Proje Özeti
+
+**KrediZeka**, bireylerin kredi başvurusu yapmadan önce kendi finansal risklerini ölçmelerini sağlayan, yapay zeka destekli modern bir web uygulamasıdır.
+
+### Hedef Kullanıcı Kitlesi
+
+Türkiye'de her yıl milyonlarca kişi banka kredisi başvurusunda bulunmakta; ancak başvuruların önemli bir kısmı ön değerlendirme aşamasında reddedilmektedir. Bu durumun temel nedeni, kullanıcıların kendi finansal profillerini nesnel olarak değerlendirememesidir. KrediZeka; başvuru öncesinde riskleri fark etmek isteyen bireysel kullanıcılar, finansal danışmanlık ihtiyacı duyanlar ve ön değerlendirme yapmak isteyen KOBİ sahipleri için tasarlanmıştır.
+
+### Çözülen Problem
+
+Geleneksel kredi değerlendirme süreçleri opak ve kullanıcıya kapalıdır. KrediZeka bu sorunu üç adımda çözer:
+
+1. **Anlık Risk Skoru** — Kullanıcının gelir, borç ve istediği kredi tutarına göre 0–100 arası bir onaylanma skoru üretilir.
+2. **Finansal Oran Analizi** — DTI (Borç/Gelir) ve LTI (Kredi/Gelir) oranları hesaplanarak sektör standartlarıyla karşılaştırılır.
+3. **Kişiselleştirilmiş Tavsiye** — Kural tabanlı bir AI motoru, kullanıcının profiline özgü Türkçe öneriler sunar.
+
+### Uygulama Özellikleri
 
 | Özellik | Açıklama |
 |---|---|
-| 🤖 **ML Tabanlı Risk Skoru** | Random Forest modeli ile 0–100 arası kredi onaylanma skoru |
-| 📊 **Findeks Tarzı Görselleştirme** | Renkli ilerleme çubuğu ve dairesel skor gösterimi |
-| 🧠 **Yapay Zeka Tavsiyesi** | DTI ve LTI oranlarına dayalı kişiselleştirilmiş finansal öneriler |
-| 🔐 **Güvenli Kimlik Doğrulama** | Bcrypt şifreleme ile T.C. No + Parola tabanlı giriş/kayıt |
-| 👤 **Kullanıcı Profili** | Meslek ve adres güncelleme imkânı |
-| 🛡️ **Form Validasyonu** | Regex ile anlık karakter engelleme (isimde sadece harf, TC'de sadece rakam) |
-| 📱 **Duyarlı Tasarım** | Masaüstü odaklı, kurumsal bankacılık UI'ı |
-| ⚡ **Yüksek Performans** | Lazy loading, GZip sıkıştırma, asenkron threadpool |
+| ML Tabanlı Risk Skoru | Random Forest modeli ile 0–100 arası kredi onaylanma skoru |
+| Findeks Tarzı Görselleştirme | Renkli ilerleme çubuğu ve dairesel skor gösterimi |
+| Yapay Zeka Tavsiyesi | DTI ve LTI oranlarına dayalı kişiselleştirilmiş finansal öneriler |
+| Güvenli Kimlik Doğrulama | Bcrypt şifreleme ile T.C. No + Parola tabanlı giriş/kayıt |
+| Kullanıcı Profili | Meslek ve adres güncelleme imkânı |
+| Form Validasyonu | Regex ile anlık karakter engelleme |
+| Duyarlı Tasarım | Kurumsal bankacılık UI tarzı |
 
 ---
 
-## 🏗️ Mimari (Tech Stack)
+## 5.2. Kullanılan AI Araçları
 
+Bu proje geliştirilirken aşağıdaki yapay zekâ araçları kullanılmıştır:
+
+### Kod Üretimi
+- **Claude Code (Anthropic)** — Tüm backend (FastAPI, ML pipeline, SQLite entegrasyonu) ve frontend (React bileşenleri, Tailwind stilleri, routing) kodları Claude Code CLI aracılığıyla üretilmiştir. Proje sıfırdan, hiç placeholder kod içermeyecek şekilde, Production-ready standartlarda geliştirilmiştir.
+
+### Veri Üretimi
+- **Claude (Anthropic)** — ML modelini eğitmek için gereken 5.000 kayıtlık sentetik finansal veri seti Claude ile üretilmiştir. Veri seti; gerçekçi gelir, borç ve kredi tutarı dağılımları içermekte ve finansal kurallara dayalı onay/red etiketleriyle oluşturulmuştur.
+
+### İçerik Üretimi
+- **Claude (Anthropic)** — Kullanım Koşulları, Gizlilik Politikası (KVKK uyumlu), Hakkımızda, Kariyer ve Basın Odası sayfalarının Türkçe içerikleri Claude ile üretilmiştir.
+
+### UI Tasarımı
+- **Claude (Anthropic)** — Tüm UI bileşenleri ve sayfa düzenleri, Claude'a verilen detaylı tasarım promptları aracılığıyla Tailwind CSS utility sınıfları kullanılarak oluşturulmuştur. Referans olarak Findeks ve modern Türk bankacılık arayüzleri esas alınmıştır.
+
+---
+
+## 5.3. Prompt Kütüphanesi
+
+Aşağıda proje geliştirme sürecinde kullanılan en etkili prompt örnekleri kategorilere göre listelenmiştir.
+
+### Kod Üretim Promptları
+
+**Backend — ML Analiz Endpoint'i:**
 ```
-kredizeka/
-├── backend/                  # Python + FastAPI API Sunucusu
-│   ├── main.py               # API uç noktaları (Register/Login/Profile/Analyze)
-│   ├── train_model.py        # ML model eğitim scripti (Random Forest)
-│   ├── requirements.txt      # Python bağımlılıkları
-│   ├── loan_risk_pipeline.pkl # Eğitilmiş ML pipeline (git ignore)
-│   └── kredizeka.db          # SQLite veritabanı (git ignore)
-│
-└── frontend/                 # React + Vite SPA
-    ├── src/
-    │   ├── App.jsx            # Yönlendirme (React Router DOM)
-    │   ├── context/
-    │   │   └── AuthContext.jsx # Uygulama geneli oturum yönetimi
-    │   ├── hooks/
-    │   │   └── useAuth.jsx    # Özel kimlik doğrulama hook'u
-    │   ├── components/
-    │   │   ├── Navbar.jsx     # Duyarlı, scroll-aware gezinme çubuğu
-    │   │   └── Footer.jsx     # Kurumsal alt bilgi
-    │   └── pages/
-    │       ├── RiskReportPage.jsx  # Ana risk analizi sayfası
-    │       ├── RegisterPage.jsx    # Kullanıcı kaydı (Regex validasyonlu)
-    │       ├── LoginPage.jsx       # Kullanıcı girişi
-    │       ├── ProfilePage.jsx     # Profil görüntüleme & güncelleme
-    │       ├── BireyselPage.jsx    # Bireysel bankacılık tanıtım
-    │       ├── TicariPage.jsx      # Ticari bankacılık tanıtım
-    │       └── UrunlerPage.jsx     # Ürün kataloğu
-    ├── tailwind.config.js     # Özel renk paleti (primary, accent)
-    └── vite.config.js         # Vite yapılandırması
+Python FastAPI + scikit-learn Random Forest kullanarak 0-100 arası kredi risk skoru
+döndüren bir /api/analyze endpoint'i yaz. Gelir, borç ve talep edilen kredi tutarı
+girdi olarak alınsın. DTI (Borç/Gelir) ve LTI (Kredi/Gelir) oranlarını hesapla.
+predict_proba() ile onaylanma olasılığını 0-100 skalaya dönüştür. Kural tabanlı
+Türkçe kişiselleştirilmiş tavsiyeler üret: DTI > %40 ise uyar, LTI > 10x ise uyar.
+FastAPI HTTPException ile hata yönetimi ekle. run_in_threadpool ile CPU-bound ML
+inference'ı asenkron çalıştır.
 ```
 
-### Kullanılan Teknolojiler
+**Backend — Güvenli Kayıt Endpoint'i:**
+```
+FastAPI ile kullanıcı kayıt endpoint'i yaz. Pydantic v2 field_validator kullanarak
+TC No'nun sadece rakam içerdiğini ve 0 ile başlamadığını doğrula. Telefon için de
+sadece rakam validasyonu ekle. Bcrypt ile parola hashle. SQLite'a parameterized query
+ile kaydet. TC No zaten kayıtlıysa 409 Conflict döndür. try/finally bloğu ile
+veritabanı bağlantısını mutlaka kapat.
+```
 
-**Backend**
-- **FastAPI** — Modern, yüksek performanslı Python web framework
-- **scikit-learn** — Random Forest sınıflandırma modeli
-- **pandas / numpy** — Veri işleme ve model girdisi hazırlama
-- **SQLite + sqlite3** — Hafif, kurulum gerektirmeyen ilişkisel veritabanı
-- **Bcrypt** — Endüstri standardı parola şifreleme
-- **Uvicorn** — ASGI tabanlı yüksek performanslı sunucu
+**Frontend — Skor Göstergesi Bileşeni:**
+```
+React + Tailwind CSS ile Findeks tarzı renkli bir kredi skoru göstergesi oluştur.
+Skor 75+ yeşil (emerald), 50-74 sarı (amber), 25-49 turuncu (orange), 0-24 kırmızı
+(red) olsun. Dairesel skor kartı ortada büyük sayı ile, altında animasyonlu yatay
+ilerleme çubuğu olsun. 0/25/50/75/100 etiketleri göster. CSS transition ile
+canlandır. Yan yana DTI ve LTI oran kartları ekle.
+```
 
-**Frontend**
-- **React 19** — Bileşen tabanlı UI kütüphanesi
-- **Vite** — Anlık HMR destekli modern derleme aracı
-- **Tailwind CSS 3** — Utility-first CSS framework
-- **React Router DOM** — İstemci taraflı yönlendirme (SPA)
-- **Lucide React** — Tutarlı ve hafif ikon kütüphanesi
-- **react-hot-toast** — Kullanıcı dostu bildirim sistemi
+**Frontend — ProtectedRoute + ScrollToTop:**
+```
+React Router DOM v7 ile iki yardımcı bileşen yaz:
+1. ScrollToTop: Her route değişiminde window.scrollTo({ top: 0, behavior: 'instant' })
+çalıştırsın.
+2. ProtectedRoute: useAuth hook'undan user alıp null ise <Navigate to="/giris" replace />
+döndürsün, değilse children render etsin.
+App.jsx'te /profil route'unu ProtectedRoute ile sar.
+```
 
-**Makine Öğrenmesi**
-- **Algoritma:** Random Forest Classifier (200 karar ağacı)
-- **Ön İşleme:** StandardScaler (özellik normalizasyonu)
-- **Pipeline:** scikit-learn Pipeline (ön işleme + model tek nesne)
-- **Eğitim Verisi:** 5.000 sentetik finansal kayıt
-- **Özellikler:** Aylık gelir, toplam borç, talep edilen kredi tutarı
-- **Çıktı:** 0–100 arası onaylanma olasılık skoru
+### Veri Üretim Promptları
+
+**Sentetik ML Eğitim Verisi:**
+```
+5000 kayıtlık sentetik finansal veri seti oluştur. Her kayıt şu alanları içersin:
+- income: 2000 ile 100000 TL arası rastgele gelir
+- debt: 0 ile gelirin %60'ı arası mevcut borç
+- loan_amount: 1000 ile 500000 TL arası talep edilen kredi
+
+Etiket (approved) için şu finansal kuralları uygula:
+- DTI (debt/income*100) > 50 → büyük ihtimalle red
+- LTI (loan/income) > 15 → büyük ihtimalle red
+- Hem DTI hem LTI düşükse → büyük ihtimalle onay
+Sonuçları pandas DataFrame olarak oluştur ve CSV'e kaydet.
+```
+
+### İçerik Üretim Promptları
+
+**KVKK Uyumlu Gizlilik Politikası:**
+```
+KrediZeka Finansal Teknoloji A.Ş. için KVKK (6698 sayılı Kişisel Verilerin Korunması
+Kanunu) uyumlu Türkçe Gizlilik Politikası metni yaz. 7 bölüm olsun: Veri Sorumlusu,
+Toplanan Kişisel Veriler, İşlenme Amacı ve Hukuki Dayanağı, Saklama Süresi ve
+Güvenlik, Üçüncü Taraflarla Paylaşım, Çerezler Politikası, KVKK 11. Madde Kapsamında
+Haklarınız. Her bölüm gerçekçi, hukuki terminoloji içeren 3-5 cümlelik metin içersin.
+```
+
+**Kariyer İlan Metinleri:**
+```
+Bir fintech startup'ı için 5 açık pozisyon ilanı oluştur:
+Kıdemli Backend Geliştirici (Python/FastAPI), Frontend Geliştirici (React/TypeScript),
+ML Mühendisi (scikit-learn/PyTorch), Veri Analisti, Ürün Müdürü.
+Her ilan için: departman, konum (İstanbul/Hibrit), çalışma türü (Tam Zamanlı).
+Kurumsal ama sıcak bir ton kullan.
+```
+
+### UI Üretim Promptları
+
+**Kurumsal Landing Page Hero Bölümü:**
+```
+Türk bankacılık sektörüne uygun kurumsal bir hero bölümü tasarla. Tailwind CSS
+kullan. Solda: büyük başlık (gradient text ile vurgulu kelime), açıklama paragrafı,
+2 CTA butonu (btn-primary + btn-secondary), 3 istatistik kartı. Sağda: animasyonlu
+özellik kartları listesi (her satırda lucide-react ikonu + başlık + açıklama).
+Arka plan: from-primary-50 via-white to-accent-50 gradient. Blur efektli dekor daireler ekle.
+```
+
+**Accordion Bileşeni (Hukuki Sayfalar):**
+```
+React useState ile tek bölüm açık accordion bileşeni yaz. Tıklanan bölüm zaten açıksa
+kapat, farklıysa aç. ChevronDown ikonu rotate-180 animasyonu yapsın. Açık bölüm
+amber border ve shadow alsın. max-h-[2000px] / max-h-0 CSS transition ile smooth
+açılma/kapanma efekti. Her bölümün içeriği whitespace-pre-line ile formatlanmış metin.
+```
 
 ---
 
-## 📸 Ekran Görüntüleri
-
-> Uygulamayı yerel ortamda çalıştırdıktan sonra ekran görüntülerinizi aşağıya ekleyebilirsiniz.
-
-| Risk Analizi | Kayıt Ol | Profil |
-|:---:|:---:|:---:|
-| ![Risk Analizi](docs/screenshots/risk-report.png) | ![Kayıt](docs/screenshots/register.png) | ![Profil](docs/screenshots/profile.png) |
-
-| Bireysel | Ticari | Ürünler |
-|:---:|:---:|:---:|
-| ![Bireysel](docs/screenshots/bireysel.png) | ![Ticari](docs/screenshots/ticari.png) | ![Ürünler](docs/screenshots/urunler.png) |
-
----
-
-## 🚀 Kurulum ve Çalıştırma
+## 5.4. Kurulum ve Çalıştırma
 
 ### Gereksinimler
 
 - **Python 3.10+** — [python.org](https://python.org)
 - **Node.js 18+** — [nodejs.org](https://nodejs.org)
 - **Git** — [git-scm.com](https://git-scm.com)
-
----
 
 ### Backend Kurulumu
 
@@ -149,58 +203,118 @@ pip install -r requirements.txt
 ```bash
 python train_model.py
 ```
-> Bu komut `loan_risk_pipeline.pkl` dosyasını oluşturur. Komut tamamlandığında model doğruluk skoru ve özellik önemleri ekrana yazdırılır.
+> Bu komut `loan_risk_pipeline.pkl` dosyasını oluşturur. Eğitim tamamlandığında model doğruluk skoru ve özellik önemleri ekrana yazdırılır.
 
 **5. API sunucusunu başlatın:**
 ```bash
 uvicorn main:app --reload --port 8000
 ```
 
-API sunucusu `http://localhost:8000` adresinde çalışmaya başlar.
+API sunucusu `http://localhost:8000` adresinde çalışmaya başlar.  
 Swagger dokümantasyonu: `http://localhost:8000/docs`
-
----
 
 ### Frontend Kurulumu
 
 Yeni bir terminal penceresi açın:
 
-**1. Frontend dizinine gidin:**
 ```bash
 cd frontend
-```
-
-**2. Node.js bağımlılıklarını yükleyin:**
-```bash
 npm install
-```
-
-**3. Geliştirme sunucusunu başlatın:**
-```bash
 npm run dev
 ```
 
 Uygulama `http://localhost:5173` adresinde açılır.
 
----
-
-### Üretim (Production) Derlemesi
+### Üretim Derlemesi
 
 ```bash
-# Frontend'i derleyin
-cd frontend
-npm run build
+# Frontend
+cd frontend && npm run build
 
-# Backend'i üretim modunda başlatın (reload olmadan)
-cd backend
-uvicorn main:app --host 0.0.0.0 --port 8000
+# Backend (reload olmadan)
+cd backend && uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 ---
 
-## 📡 API Dokümantasyonu
+## 5.5. Gelecek Vizyonu
 
-Sunucu çalışırken Swagger UI'a erişin: `http://localhost:8000/docs`
+### Geliştirilebilecek AI Özellikleri
+
+| Özellik | Açıklama |
+|---|---|
+| **LLM Destekli Tavsiye Motoru** | Kural tabanlı mesajların yerine GPT-4o / Claude 3.5 ile kişiye özel, konuşma tarzında finansal danışmanlık |
+| **Belge Analizi (OCR + AI)** | Kullanıcının maaş bordrosu veya vergi levhasını yüklemesi, AI'ın belgeyi okuyarak gelir verisini otomatik doldurması |
+| **Zaman Serisi Risk Takibi** | Kullanıcının aylık analizlerini kaydedip gelir/borç trendini zaman serisi grafiğiyle gösterme |
+| **Gelişmiş ML Modeli** | XGBoost veya LightGBM ile daha fazla özellik (yaş, meslek kategorisi, şehir) eklenerek model doğruluğunu artırma |
+| **Çoklu Kredi Senaryosu** | "Eğer borcumu şu kadar azaltırsam skor ne olur?" sorusuna yanıt veren interaktif senaryo simülatörü |
+
+### Çözülebilecek Kullanıcı Problemleri
+
+- **Finansal Okuryazarlık Eksikliği** — Kullanıcıların DTI/LTI gibi teknik kavramları anlamalarına yardımcı olan eğitici içerikler ve video açıklamalar
+- **Erişilebilirlik** — Ekran okuyucu uyumlu WCAG 2.1 AA standardına geçiş; düşük bant genişliğine uygun hafif mod
+- **Çoklu Dil Desteği** — Türkiye'deki yabancı uyruklu kullanıcılar için İngilizce arayüz seçeneği
+- **Banka API Entegrasyonu** — Open Banking (BDDK onaylı) entegrasyonu ile banka hesabından otomatik gelir/borç verisi çekme
+
+### Ölçeklenebilirlik
+
+Uygulama şu anda tek sunucu üzerinde SQLite ile çalışmaktadır. Gerçek bir üretim ortamı için önerilen mimari:
+
+```
+Kullanıcı
+   ↓
+CDN (Cloudflare) → React SPA (Vercel / S3 + CloudFront)
+   ↓
+Load Balancer
+   ↓
+FastAPI Cluster (3+ instance, Docker + Kubernetes)
+   ↓
+PostgreSQL (AWS RDS) + Redis (önbellek + oturum)
+   ↓
+ML Inference Servisi (ayrı mikroservis, GPU destekli)
+```
+
+Beklenen ölçek: 100.000 aktif kullanıcı, günde 50.000+ analiz isteği.
+
+---
+
+## Mimari (Tech Stack)
+
+```
+kredizeka/
+├── backend/
+│   ├── main.py               # API uç noktaları
+│   ├── train_model.py        # ML model eğitim scripti
+│   ├── requirements.txt      # Python bağımlılıkları
+│   ├── loan_risk_pipeline.pkl # Eğitilmiş ML pipeline
+│   └── kredizeka.db          # SQLite veritabanı
+│
+└── frontend/
+    ├── src/
+    │   ├── App.jsx            # Yönlendirme
+    │   ├── context/AuthContext.jsx
+    │   ├── hooks/useAuth.jsx
+    │   ├── components/
+    │   │   ├── Navbar.jsx
+    │   │   └── Footer.jsx
+    │   └── pages/
+    │       ├── RiskReportPage.jsx
+    │       ├── RegisterPage.jsx
+    │       ├── LoginPage.jsx
+    │       ├── ProfilePage.jsx
+    │       ├── HakkimizdaPage.jsx
+    │       ├── KariyerPage.jsx
+    │       ├── BasinOdasiPage.jsx
+    │       ├── GizlilikPolitikasiPage.jsx
+    │       └── KullanimKosullariPage.jsx
+    └── tailwind.config.js
+```
+
+---
+
+## API Dokümantasyonu
+
+Sunucu çalışırken Swagger UI: `http://localhost:8000/docs`
 
 | Method | Endpoint | Açıklama |
 |--------|----------|----------|
@@ -211,77 +325,43 @@ Sunucu çalışırken Swagger UI'a erişin: `http://localhost:8000/docs`
 | `PUT` | `/api/profile` | Meslek ve adres güncelle |
 | `POST` | `/api/analyze` | ML tabanlı risk analizi |
 
-### Örnek: Risk Analizi İsteği
-
+**Örnek — Risk Analizi:**
 ```bash
 curl -X POST http://localhost:8000/api/analyze \
   -H "Content-Type: application/json" \
-  -d '{
-    "income": 15000,
-    "debt": 3000,
-    "loan_amount": 50000
-  }'
+  -d '{"income": 15000, "debt": 3000, "loan_amount": 50000}'
 ```
 
-**Örnek Yanıt:**
+**Yanıt:**
 ```json
 {
   "score": 72,
   "risk_status": "Orta Risk",
-  "risk_color": "yellow",
   "dti": 20.0,
   "lti": 3.3,
-  "ai_advice": "⚠️ Kredi onaylanma skorunuz 72/100 ile orta seviyede...\n\n✅ Borç/Gelir oranınız %20.0 ile sağlıklı...",
-  "input_summary": {
-    "income": 15000,
-    "debt": 3000,
-    "loan_amount": 50000
-  }
+  "ai_advice": "Kredi onaylanma skorunuz 72/100..."
 }
 ```
 
-### Risk Skoru Kategorileri
-
-| Skor Aralığı | Durum | Renk |
+| Skor | Durum | Renk |
 |---|---|---|
-| 75 – 100 | ✅ Düşük Risk | Yeşil |
-| 50 – 74 | ⚠️ Orta Risk | Sarı |
-| 25 – 49 | 🔶 Yüksek Risk | Turuncu |
-| 0 – 24 | 🔴 Çok Yüksek Risk | Kırmızı |
+| 75–100 | Düşük Risk | Yeşil |
+| 50–74 | Orta Risk | Sarı |
+| 25–49 | Yüksek Risk | Turuncu |
+| 0–24 | Çok Yüksek Risk | Kırmızı |
 
 ---
 
-## 🔒 Güvenlik
+## Güvenlik
 
-- **Bcrypt** — Parolalar asla düz metin olarak saklanmaz; her kayıtta benzersiz tuz (salt) eklenir
-- **Parameterized Queries** — SQL enjeksiyonu (SQL Injection) saldırılarına karşı tüm sorgular parametreli yazılmıştır
-- **CORS** — Geliştirme ortamında tüm kaynaklara açık; üretimde kısıtlanmalıdır
-- **Pydantic Doğrulama** — Tüm API girdileri tip ve aralık doğrulamasından geçer
-- **Form Validasyonu** — Frontend'de Regex ile anlık karakter engelleme uygulanır
-
----
-
-## 🤝 Katkı Sağlama
-
-Katkılarınızı memnuniyetle karşılarız!
-
-```bash
-# 1. Projeyi fork edin
-# 2. Feature branch oluşturun
-git checkout -b ozellik/yeni-ozellik
-
-# 3. Değişikliklerinizi commit edin
-git commit -m "feat: yeni özellik açıklaması"
-
-# 4. Branch'ı push edin
-git push origin ozellik/yeni-ozellik
-
-# 5. Pull Request açın
-```
+- **Bcrypt** — Parolalar asla düz metin saklanmaz; her kayıtta benzersiz salt eklenir
+- **Parameterized Queries** — SQL enjeksiyonu saldırılarına karşı korumalı
+- **Pydantic Doğrulama** — TC No yalnızca rakam ve 0 ile başlayamaz kuralı, tüm API girdileri tip doğrulamasından geçer
+- **ProtectedRoute** — Giriş yapmadan /profil sayfasına erişim engellenir
 
 ---
 
-## 📄 Lisans
+## Lisans
 
 Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır.
 
@@ -291,8 +371,6 @@ Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır.
 
 **KrediZeka** — Finansal kararlarınızda yapay zekanın gücünden yararlanın.
 
-*Python + FastAPI + React + scikit-learn ile geliştirilmiştir.*
-
-⭐ Bu projeyi beğendiyseniz yıldız vermeyi unutmayın!
+*Python + FastAPI + React + scikit-learn + Claude Code ile geliştirilmiştir.*
 
 </div>

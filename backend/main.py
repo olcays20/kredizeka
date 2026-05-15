@@ -23,7 +23,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.concurrency import run_in_threadpool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 
 # =============================================================================
@@ -96,10 +96,26 @@ class RegisterRequest(BaseModel):
     phone: str = Field(..., min_length=11, max_length=11, description="11 haneli cep telefonu")
     password: str = Field(..., min_length=6, max_length=100, description="Parola (min 6 karakter)")
 
+    @field_validator('tc_no')
+    @classmethod
+    def validate_tc_no(cls, v: str) -> str:
+        if not v.isdigit():
+            raise ValueError("T.C. Kimlik Numarası yalnızca rakamlardan oluşmalıdır.")
+        if v[0] == '0':
+            raise ValueError("T.C. Kimlik Numarası 0 ile başlayamaz.")
+        return v
+
+    @field_validator('phone')
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        if not v.isdigit():
+            raise ValueError("Telefon numarası yalnızca rakamlardan oluşmalıdır.")
+        return v
+
 class LoginRequest(BaseModel):
     """Giriş yapma isteği için beklenen veri yapısı"""
     tc_no: str = Field(..., min_length=11, max_length=11)
-    password: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=6)
 
 class ProfileUpdateRequest(BaseModel):
     """Profil güncelleme isteği için beklenen veri yapısı"""
@@ -188,7 +204,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # ÜRETİM İÇİN: ["https://sizin-domain.vercel.app"]
-    allow_credentials=True,
+    allow_credentials=False,  # localStorage kullanılıyor; wildcard origin ile credentials=True geçersiz
     allow_methods=["*"],     # Tüm HTTP metotlarına izin ver (GET, POST, PUT, DELETE)
     allow_headers=["*"],     # Tüm HTTP başlıklarına izin ver
 )
@@ -230,37 +246,38 @@ async def register(req: RegisterRequest):
     - Kaba kuvvet (brute force) saldırılarına karşı yavaşlatma mekanizması içerir
     
     Hata Durumları:
-    - 400: Aynı T.C. No ile daha önce kayıt yapılmışsa
+    - 409: Aynı T.C. No ile daha önce kayıt yapılmışsa
     """
     conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # T.C. No benzersizlik kontrolü
-    existing = cursor.execute("SELECT id FROM users WHERE tc_no = ?", (req.tc_no,)).fetchone()
-    if existing:
-        conn.close()
-        raise HTTPException(
-            status_code=400,
-            detail="Bu T.C. Kimlik Numarası ile zaten bir hesap bulunmaktadır."
+    try:
+        cursor = conn.cursor()
+
+        # T.C. No benzersizlik kontrolü
+        existing = cursor.execute("SELECT id FROM users WHERE tc_no = ?", (req.tc_no,)).fetchone()
+        if existing:
+            raise HTTPException(
+                status_code=409,
+                detail="Bu T.C. Kimlik Numarası ile zaten bir hesap bulunmaktadır."
+            )
+
+        # Parolayı Bcrypt ile şifrele
+        # gensalt(): Rastgele bir tuz (salt) üretir
+        # hashpw(): Parola + tuz birleşimini hash'ler
+        # encode('utf-8'): String'i byte dizisine çevirir (bcrypt byte dizisi bekler)
+        password_hash = bcrypt.hashpw(
+            req.password.encode('utf-8'),
+            bcrypt.gensalt()
+        ).decode('utf-8')  # Byte dizisini tekrar string'e çeviriyoruz (veritabanında saklamak için)
+
+        # Kullanıcıyı veritabanına kaydet
+        cursor.execute(
+            "INSERT INTO users (tc_no, full_name, phone, password_hash) VALUES (?, ?, ?, ?)",
+            (req.tc_no, req.full_name, req.phone, password_hash)
         )
-    
-    # Parolayı Bcrypt ile şifrele
-    # gensalt(): Rastgele bir tuz (salt) üretir
-    # hashpw(): Parola + tuz birleşimini hash'ler
-    # encode('utf-8'): String'i byte dizisine çevirir (bcrypt byte dizisi bekler)
-    password_hash = bcrypt.hashpw(
-        req.password.encode('utf-8'),
-        bcrypt.gensalt()
-    ).decode('utf-8')  # Byte dizisini tekrar string'e çeviriyoruz (veritabanında saklamak için)
-    
-    # Kullanıcıyı veritabanına kaydet
-    cursor.execute(
-        "INSERT INTO users (tc_no, full_name, phone, password_hash) VALUES (?, ?, ?, ?)",
-        (req.tc_no, req.full_name, req.phone, password_hash)
-    )
-    conn.commit()
-    conn.close()
-    
+        conn.commit()
+    finally:
+        conn.close()
+
     return {
         "success": True,
         "message": f"Hoş geldiniz {req.full_name}! Hesabınız başarıyla oluşturuldu."
@@ -286,12 +303,13 @@ async def login(req: LoginRequest):
     - 401: T.C. No bulunamadıysa veya parola yanlışsa
     """
     conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Kullanıcıyı T.C. No ile bul
-    user = cursor.execute("SELECT * FROM users WHERE tc_no = ?", (req.tc_no,)).fetchone()
-    conn.close()
-    
+    try:
+        cursor = conn.cursor()
+        # Kullanıcıyı T.C. No ile bul
+        user = cursor.execute("SELECT * FROM users WHERE tc_no = ?", (req.tc_no,)).fetchone()
+    finally:
+        conn.close()
+
     if not user:
         raise HTTPException(
             status_code=401,
@@ -335,11 +353,12 @@ async def get_profile(tc_no: str):
     - 404: T.C. No ile eşleşen kullanıcı bulunamazsa
     """
     conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    user = cursor.execute("SELECT * FROM users WHERE tc_no = ?", (tc_no,)).fetchone()
-    conn.close()
-    
+    try:
+        cursor = conn.cursor()
+        user = cursor.execute("SELECT * FROM users WHERE tc_no = ?", (tc_no,)).fetchone()
+    finally:
+        conn.close()
+
     if not user:
         raise HTTPException(
             status_code=404,
@@ -366,22 +385,23 @@ async def update_profile(req: ProfileUpdateRequest):
     - 404: T.C. No ile eşleşen kullanıcı bulunamazsa
     """
     conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Kullanıcının var olup olmadığını kontrol et
-    user = cursor.execute("SELECT id FROM users WHERE tc_no = ?", (req.tc_no,)).fetchone()
-    if not user:
+    try:
+        cursor = conn.cursor()
+
+        # Kullanıcının var olup olmadığını kontrol et
+        user = cursor.execute("SELECT id FROM users WHERE tc_no = ?", (req.tc_no,)).fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
+
+        # Meslek ve adres bilgilerini güncelle
+        cursor.execute(
+            "UPDATE users SET occupation = ?, address = ? WHERE tc_no = ?",
+            (req.occupation, req.address, req.tc_no)
+        )
+        conn.commit()
+    finally:
         conn.close()
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
-    
-    # Meslek ve adres bilgilerini güncelle
-    cursor.execute(
-        "UPDATE users SET occupation = ?, address = ? WHERE tc_no = ?",
-        (req.occupation, req.address, req.tc_no)
-    )
-    conn.commit()
-    conn.close()
-    
+
     return {
         "success": True,
         "message": "Profil bilgileriniz başarıyla güncellendi."

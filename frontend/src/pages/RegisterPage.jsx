@@ -62,7 +62,10 @@ export default function RegisterPage() {
       toast.success(data.message);
       setTimeout(() => navigate('/giris'), 2000);
     } catch (err) {
-      toast.error(err.message);
+      const msg = err instanceof TypeError
+        ? 'Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.'
+        : (err.message || 'Beklenmeyen bir hata oluştu.');
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

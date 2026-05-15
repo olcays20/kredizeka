@@ -6,7 +6,6 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { User, Briefcase, MapPin, Phone, CreditCard, Save, Edit3 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -15,7 +14,6 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
-  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ occupation: '', address: '' });
@@ -31,19 +29,19 @@ export default function ProfilePage() {
       setProfile(data);
       setEditForm({ occupation: data.occupation || '', address: data.address || '' });
     } catch (err) {
-      toast.error(err.message);
+      const msg = err instanceof TypeError
+        ? 'Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.'
+        : (err.message || 'Beklenmeyen bir hata oluştu.');
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  // Giriş yapmamış kullanıcıyı giriş sayfasına yönlendir
   useEffect(() => {
-    if (!user) { navigate('/giris'); return; }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, []);
 
   // Profil güncelleme
   const handleSave = async () => {
@@ -62,7 +60,10 @@ export default function ProfilePage() {
       setEditing(false);
       toast.success('Profil bilgileriniz güncellendi.');
     } catch (err) {
-      toast.error(err.message);
+      const msg = err instanceof TypeError
+        ? 'Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.'
+        : (err.message || 'Beklenmeyen bir hata oluştu.');
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

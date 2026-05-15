@@ -5,10 +5,11 @@
  * Tüm sayfalar Navbar ve Footer arasında render edilir.
  */
 
-import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './hooks/useAuth';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
@@ -21,6 +22,27 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const BireyselPage = lazy(() => import('./pages/BireyselPage'));
 const TicariPage = lazy(() => import('./pages/TicariPage'));
 const UrunlerPage = lazy(() => import('./pages/UrunlerPage'));
+const HakkimizdaPage = lazy(() => import('./pages/HakkimizdaPage'));
+const KariyerPage = lazy(() => import('./pages/KariyerPage'));
+const BasinOdasiPage = lazy(() => import('./pages/BasinOdasiPage'));
+const GizlilikPolitikasiPage = lazy(() => import('./pages/GizlilikPolitikasiPage'));
+const KullanimKosullariPage = lazy(() => import('./pages/KullanimKosullariPage'));
+
+// Her route değişiminde sayfayı en üste kaydırır
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [pathname]);
+  return null;
+}
+
+// Giriş yapmamış kullanıcıları /giris sayfasına yönlendirir
+function ProtectedRoute({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/giris" replace />;
+  return children;
+}
 
 // Lazy load olurken gösterilecek şık yükleniyor bileşeni
 const PageLoader = () => (
@@ -39,6 +61,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
+        <ScrollToTop />
         <Toaster position="top-right" />
         <div className="flex flex-col min-h-screen">
           <Navbar />
@@ -48,10 +71,19 @@ function App() {
                 <Route path="/" element={<RiskReportPage />} />
                 <Route path="/kayit" element={<RegisterPage />} />
                 <Route path="/giris" element={<LoginPage />} />
-                <Route path="/profil" element={<ProfilePage />} />
+                <Route path="/profil" element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                } />
                 <Route path="/bireysel" element={<BireyselPage />} />
                 <Route path="/ticari" element={<TicariPage />} />
                 <Route path="/urunler" element={<UrunlerPage />} />
+                <Route path="/hakkimizda" element={<HakkimizdaPage />} />
+                <Route path="/kariyer" element={<KariyerPage />} />
+                <Route path="/basin-odasi" element={<BasinOdasiPage />} />
+                <Route path="/gizlilik-politikasi" element={<GizlilikPolitikasiPage />} />
+                <Route path="/kullanim-kosullari" element={<KullanimKosullariPage />} />
               </Routes>
             </Suspense>
           </main>

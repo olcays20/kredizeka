@@ -2,13 +2,14 @@
  * KrediZeka - Footer (Alt Bilgi) Bileşeni
  * ==========================================
  * Kurumsal görünüm sağlayan, linkler ve bilgi içeren footer bileşeni.
- * Gradient arka plan ve cam efekti ile modern bir tasarıma sahiptir.
+ * Tüm metinler i18n çeviri sisteminden (TR/EN) okunur.
  */
 
 import { Link } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 import { Shield, Phone, Mail, MapPin, ChevronRight, AlertTriangle } from 'lucide-react';
 
-// Sosyal medya ikonları için inline SVG bileşenleri (Lucide marka ikonu içermediğinden)
+// Sosyal medya ikonları için inline SVG bileşenleri
 const LinkedInIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
     <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
@@ -34,18 +35,18 @@ const GitHubIcon = () => (
 );
 
 export default function Footer() {
+  const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
 
   return (
     <footer className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-primary-950 text-white overflow-hidden">
-      {/* Dekoratif arka plan dairesi */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-primary-600/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-accent-600/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
-      
+
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* ─── Üst Kısım: Linkler ─── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 py-16 border-b border-white/10">
-          
+
           {/* Marka & Açıklama */}
           <div className="lg:col-span-1">
             <Link to="/" className="flex items-center gap-3 mb-5 group">
@@ -57,31 +58,22 @@ export default function Footer() {
                   Kredi<span className="text-primary-400">Zeka</span>
                 </h3>
                 <p className="text-[10px] font-medium tracking-widest uppercase text-slate-400">
-                  Finansal Asistan
+                  {t('navbar.brand_tagline')}
                 </p>
               </div>
             </Link>
             <p className="text-slate-400 text-sm leading-relaxed mb-6">
-              Yapay zeka destekli finansal risk analizi ile kredi kararlarınızda
-              güvenilir bir rehber. Verileriniz güvende, kararlarınız bilinçli.
+              {t('footer.tagline')}
             </p>
-            {/* Sosyal Medya İkonları */}
             <div className="flex items-center gap-3">
               {[
                 { Icon: LinkedInIcon,  href: 'https://linkedin.com/company/kredizeka', label: 'LinkedIn' },
-                { Icon: XIcon,        href: 'https://x.com/kredizeka',                label: 'X (Twitter)' },
+                { Icon: XIcon,         href: 'https://x.com/kredizeka',                label: 'X (Twitter)' },
                 { Icon: InstagramIcon, href: 'https://instagram.com/kredizeka',       label: 'Instagram' },
-                { Icon: GitHubIcon,   href: 'https://github.com/kredizeka',           label: 'GitHub' },
+                { Icon: GitHubIcon,    href: 'https://github.com/kredizeka',           label: 'GitHub' },
               ].map(({ Icon, href, label }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={label}
-                  aria-label={label}
-                  className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 hover:bg-primary-600 hover:text-white transition-all duration-300 hover:-translate-y-1"
-                >
+                <a key={label} href={href} target="_blank" rel="noopener noreferrer" title={label} aria-label={label}
+                  className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 hover:bg-primary-600 hover:text-white transition-all duration-300 hover:-translate-y-1">
                   <Icon />
                 </a>
               ))}
@@ -91,20 +83,17 @@ export default function Footer() {
           {/* Hızlı Erişim */}
           <div>
             <h4 className="text-sm font-bold tracking-wider uppercase text-slate-300 mb-5">
-              Hızlı Erişim
+              {t('footer.quick_access')}
             </h4>
             <ul className="space-y-3">
               {[
-                { label: 'Risk Analizi', path: '/' },
-                { label: 'Bireysel Bankacılık', path: '/bireysel' },
-                { label: 'Ticari Bankacılık', path: '/ticari' },
-                { label: 'Ürünlerimiz', path: '/urunler' },
+                { label: t('footer.link_risk'), path: '/' },
+                { label: t('footer.link_individual'), path: '/bireysel' },
+                { label: t('footer.link_commercial'), path: '/ticari' },
+                { label: t('footer.link_products'), path: '/urunler' },
               ].map(({ label, path }) => (
                 <li key={path}>
-                  <Link
-                    to={path}
-                    className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-all duration-300 group"
-                  >
+                  <Link to={path} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-all duration-300 group">
                     <ChevronRight className="w-3 h-3 text-primary-500 group-hover:translate-x-1 transition-transform duration-300" />
                     {label}
                   </Link>
@@ -116,21 +105,18 @@ export default function Footer() {
           {/* Kurumsal */}
           <div>
             <h4 className="text-sm font-bold tracking-wider uppercase text-slate-300 mb-5">
-              Kurumsal
+              {t('footer.corporate')}
             </h4>
             <ul className="space-y-3">
               {[
-                { label: 'Hakkımızda',          path: '/hakkimizda' },
-                { label: 'Kariyer',             path: '/kariyer' },
-                { label: 'Basın Odası',         path: '/basin-odasi' },
-                { label: 'Gizlilik Politikası', path: '/gizlilik-politikasi' },
-                { label: 'Kullanım Koşulları',  path: '/kullanim-kosullari' },
+                { label: t('footer.link_about'), path: '/hakkimizda' },
+                { label: t('footer.link_career'), path: '/kariyer' },
+                { label: t('footer.link_press'), path: '/basin-odasi' },
+                { label: t('footer.link_privacy'), path: '/gizlilik-politikasi' },
+                { label: t('footer.link_terms'), path: '/kullanim-kosullari' },
               ].map(({ label, path }) => (
                 <li key={path}>
-                  <Link
-                    to={path}
-                    className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-all duration-300 group"
-                  >
+                  <Link to={path} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-all duration-300 group">
                     <ChevronRight className="w-3 h-3 text-primary-500 group-hover:translate-x-1 transition-transform duration-300" />
                     {label}
                   </Link>
@@ -142,7 +128,7 @@ export default function Footer() {
           {/* İletişim */}
           <div>
             <h4 className="text-sm font-bold tracking-wider uppercase text-slate-300 mb-5">
-              İletişim
+              {t('footer.contact')}
             </h4>
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
@@ -150,7 +136,7 @@ export default function Footer() {
                   <Phone className="w-4 h-4 text-primary-400" />
                 </div>
                 <div>
-                  <p className="text-slate-400 text-xs mb-0.5">Müşteri Hattı</p>
+                  <p className="text-slate-400 text-xs mb-0.5">{t('footer.support_line')}</p>
                   <p className="text-white text-sm font-semibold">0850 123 45 67</p>
                 </div>
               </li>
@@ -159,7 +145,7 @@ export default function Footer() {
                   <Mail className="w-4 h-4 text-primary-400" />
                 </div>
                 <div>
-                  <p className="text-slate-400 text-xs mb-0.5">E-Posta</p>
+                  <p className="text-slate-400 text-xs mb-0.5">{t('footer.email_label')}</p>
                   <p className="text-white text-sm font-semibold">destek@kredizeka.com</p>
                 </div>
               </li>
@@ -168,7 +154,7 @@ export default function Footer() {
                   <MapPin className="w-4 h-4 text-primary-400" />
                 </div>
                 <div>
-                  <p className="text-slate-400 text-xs mb-0.5">Merkez Ofis</p>
+                  <p className="text-slate-400 text-xs mb-0.5">{t('footer.address_label')}</p>
                   <p className="text-white text-sm font-semibold">Levent, İstanbul</p>
                 </div>
               </li>
@@ -185,13 +171,11 @@ export default function Footer() {
               </div>
               <div className="flex-1">
                 <h4 className="text-sm font-bold tracking-wider uppercase text-amber-300 mb-2">
-                  Yasal Uyarı
+                  {t('footer.disclaimer_title')}
                 </h4>
                 <p className="text-amber-100/90 text-sm leading-relaxed">
-                  Bu web sitesi <strong className="text-amber-200">ticari bir faaliyet göstermemektedir</strong>.
-                  Tamamen eğitim, akademik portföy ve teknoloji simülasyonu amacıyla geliştirilmiş bir
-                  test (demo) ortamıdır. Sitede yer alan veriler, haberler ve risk analiz sonuçları
-                  gerçek dışıdır ve hiçbir finansal tavsiye niteliği taşımaz.
+                  {/* Trans bileşeni HTML etiketlerini (örn. <strong>) çeviri içinde korur */}
+                  <Trans i18nKey="footer.disclaimer_body" components={{ strong: <strong className="text-amber-200" /> }} />
                 </p>
               </div>
             </div>
@@ -201,10 +185,10 @@ export default function Footer() {
         {/* ─── Alt Kısım: Telif Hakkı ─── */}
         <div className="py-6 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-white/10">
           <p className="text-slate-500 text-xs text-center md:text-left">
-            © {currentYear} KrediZeka — Akademik portföy projesi. Tüm hakları saklıdır.
+            © {currentYear} {t('footer.copyright')}
           </p>
           <div className="flex items-center gap-1 text-slate-500 text-xs">
-            <span>Eğitim ve teknoloji gösterimi amacıyla geliştirilmiştir.</span>
+            <span>{t('footer.edu_notice')}</span>
           </div>
         </div>
       </div>

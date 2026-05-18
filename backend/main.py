@@ -250,6 +250,18 @@ def on_startup():
 
     init_database()
 
+    # ─── ML Modelini Yükle (yoksa otomatik eğit) ────────────────────
+    # Render gibi ephemeral disk'lerde model dosyası yeni deploy'da kaybolur,
+    # bu yüzden startup'ta yoksa otomatik eğitiriz (~1-2 dakika sürer).
+    if not os.path.exists(MODEL_PATH):
+        print(f"⚠️  Model bulunamadı, eğitim başlatılıyor: {MODEL_PATH}")
+        try:
+            from train_model import main as train_main
+            train_main()
+        except Exception as e:
+            print(f"❌ Model eğitim hatası: {e}")
+            print("   /api/analyze endpoint'i 503 dönecek; diğer endpoint'ler çalışır.")
+
     if os.path.exists(MODEL_PATH):
         ml_bundle = joblib.load(MODEL_PATH)
         metrics = ml_bundle.get("metrics", {})
@@ -258,8 +270,7 @@ def on_startup():
         print(f"   • ROC AUC : {metrics.get('roc_auc', 0):.4f}")
         print(f"   • SHAP    : {'✓ explainer hazır' if ml_bundle.get('explainer') else '✗ yok'}")
     else:
-        print(f"⚠️  UYARI: ML model dosyası yok: {MODEL_PATH}")
-        print("   Önce: python train_model.py")
+        print(f"⚠️  UYARI: ML modeli henüz yüklenemedi.")
 
     print("\n✅ Sunucu hazır → http://localhost:8000")
     print("📖 API Docs    → http://localhost:8000/docs")

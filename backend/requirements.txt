@@ -1,7 +1,8 @@
 # =============================================================================
 # KrediZeka Backend - Python Bağımlılıkları
 # =============================================================================
-# Üretime hazır (production-ready) sürümlerle pin'lendi.
+# Render Python 3.11.9 ile kanıtlanmış stabil versiyon kombosu.
+# numpy 1.26.x → tüm ML kütüphaneleri ile çakışmasız çalışır.
 # =============================================================================
 
 # ─── Web Framework ──────────────────────────────────────────────────────
@@ -20,12 +21,12 @@ python-dotenv==1.0.1
 
 # ─── Güvenlik ───────────────────────────────────────────────────────────
 bcrypt==4.1.3
-slowapi==0.1.9          # IP tabanlı rate limiting
+slowapi==0.1.9
 
-# ─── Veri & ML ─────────────────────────────────────────────────────────
-pandas==2.2.3
-numpy==2.2.0
-scikit-learn==1.6.1
-xgboost==2.1.3          # Gradient boosting model (Random Forest'ten upgrade)
-shap==0.46.0            # Açıklanabilir YZ (SHapley values)
+# ─── Veri & ML (numpy 1.x kombosu — en stabil) ────────────────────────
+pandas==2.2.2
+numpy==1.26.4
+scikit-learn==1.4.2
+xgboost==2.0.3
+shap==0.45.1
 joblib==1.4.2

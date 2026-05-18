@@ -3,7 +3,16 @@
  * =============================================
  * React Router DOM ile çok sayfalı SPA mimarisi.
  * Tüm sayfalar Navbar ve Footer arasında render edilir.
+ *
+ * Eklenenler:
+ *   - i18n yapılandırması (TR/EN otomatik yüklenir)
+ *   - AdminRoute: Sadece is_admin = true olan kullanıcılara açık rota
+ *   - /admin rotası
  */
+
+// i18n yapılandırmasını uygulama başlangıcında import et
+// (import edildiği anda i18next initialize olur — tek seferlik)
+import './i18n/config';
 
 import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
@@ -29,6 +38,7 @@ const HaberlerPage = lazy(() => import('./pages/HaberlerPage'));
 const IsBasvurusuPage = lazy(() => import('./pages/IsBasvurusuPage'));
 const GizlilikPolitikasiPage = lazy(() => import('./pages/GizlilikPolitikasiPage'));
 const KullanimKosullariPage = lazy(() => import('./pages/KullanimKosullariPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
 
 // Her route değişiminde sayfayı en üste kaydırır
 function ScrollToTop() {
@@ -43,6 +53,15 @@ function ScrollToTop() {
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/giris" replace />;
+  return children;
+}
+
+// Admin yetkisi olmayan kullanıcıları ana sayfaya yönlendirir
+// is_admin = false ise erişimi engeller
+function AdminRoute({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/giris" replace />;
+  if (!user.is_admin) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -88,6 +107,11 @@ function App() {
                 <Route path="/haberler" element={<HaberlerPage />} />
                 <Route path="/gizlilik-politikasi" element={<GizlilikPolitikasiPage />} />
                 <Route path="/kullanim-kosullari" element={<KullanimKosullariPage />} />
+                <Route path="/admin" element={
+                  <AdminRoute>
+                    <AdminPage />
+                  </AdminRoute>
+                } />
               </Routes>
             </Suspense>
           </main>

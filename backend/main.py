@@ -19,7 +19,8 @@ import bcrypt
 import pandas as pd
 import numpy as np
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from datetime import datetime
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.concurrency import run_in_threadpool
@@ -54,8 +55,8 @@ def get_db_connection():
 def init_database():
     """
     Uygulama ilk çalıştırıldığında veritabanı tablosunu oluşturur.
-    Ayrıca mevcut veritabanlarına eksik sütunları (ör. profile_picture) ekler
-    — bu sayede şema göçü (schema migration) otomatik gerçekleşir.
+    Ayrıca mevcut veritabanlarına eksik sütunları (profile_picture, is_admin,
+    created_at) ekler — şema göçü (schema migration) otomatik gerçekleşir.
 
     'users' tablosu:
       - id: Otomatik artan birincil anahtar (primary key)
@@ -63,11 +64,15 @@ def init_database():
       - full_name: Ad Soyad
       - phone: Cep telefonu numarası
       - password_hash: Bcrypt ile şifrelenmiş (hash'lenmiş) parola
-      - occupation: Meslek bilgisi (isteğe bağlı, sonradan güncellenebilir)
-      - address: Adres bilgisi (isteğe bağlı, sonradan güncellenebilir)
-      - profile_picture: Base64 olarak kodlanmış profil fotoğrafı (data:image/...)
+      - occupation: Meslek bilgisi
+      - address: Adres bilgisi
+      - profile_picture: Base64 olarak kodlanmış profil fotoğrafı
+      - is_admin: 1 ise admin, 0 ise normal kullanıcı (RBAC için)
+      - created_at: Kayıt tarihi (ISO 8601 formatında)
 
-    IF NOT EXISTS: Tablo zaten varsa tekrar oluşturmaz, hata vermez.
+    Ek olarak: Sistemde hiç admin yoksa varsayılan admin hesabı oluşturur:
+      - T.C.: 11111111111
+      - Şifre: admin123
     """
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -80,18 +85,62 @@ def init_database():
             password_hash TEXT NOT NULL,
             occupation TEXT DEFAULT '',
             address TEXT DEFAULT '',
-            profile_picture TEXT DEFAULT ''
+            profile_picture TEXT DEFAULT '',
+            is_admin INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT ''
         )
     """)
 
-    # Mevcut veritabanlarında eksik sütunları otomatik ekle (idempotent migration)
+    # ─── Mevcut veritabanlarına eksik sütunları otomatik ekle ──────────────
     # PRAGMA table_info -> tablonun mevcut sütun listesini döndürür
     existing_columns = {row['name'] for row in cursor.execute("PRAGMA table_info(users)").fetchall()}
+
     if 'profile_picture' not in existing_columns:
         cursor.execute("ALTER TABLE users ADD COLUMN profile_picture TEXT DEFAULT ''")
         print("🔄 Migration: 'profile_picture' sütunu eklendi.")
 
+    if 'is_admin' not in existing_columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0")
+        print("🔄 Migration: 'is_admin' sütunu eklendi.")
+
+    if 'created_at' not in existing_columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT ''")
+        print("🔄 Migration: 'created_at' sütunu eklendi.")
+
     conn.commit()
+
+    # ─── Varsayılan Admin Hesabını Oluştur (yoksa) ─────────────────────────
+    # Sistemde hiç admin yoksa otomatik olarak varsayılan bir admin yarat.
+    # Bu sayede her yeni kurulumda admin paneli erişilebilir olur.
+    admin_count = cursor.execute("SELECT COUNT(*) AS cnt FROM users WHERE is_admin = 1").fetchone()['cnt']
+    if admin_count == 0:
+        default_admin_tc = "11111111111"
+        default_admin_password = "admin123"
+        # Zaten bu TC ile bir kullanıcı varsa onu admin yap, yoksa yeni oluştur
+        existing_user = cursor.execute(
+            "SELECT id FROM users WHERE tc_no = ?", (default_admin_tc,)
+        ).fetchone()
+        if existing_user:
+            cursor.execute(
+                "UPDATE users SET is_admin = 1 WHERE tc_no = ?", (default_admin_tc,)
+            )
+            print(f"🛡️  Mevcut kullanıcı admin yapıldı: TC={default_admin_tc}")
+        else:
+            password_hash = bcrypt.hashpw(
+                default_admin_password.encode('utf-8'),
+                bcrypt.gensalt()
+            ).decode('utf-8')
+            cursor.execute(
+                """
+                INSERT INTO users (tc_no, full_name, phone, password_hash, is_admin, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (default_admin_tc, "KrediZeka Yönetici", "00000000000",
+                 password_hash, 1, datetime.utcnow().isoformat())
+            )
+            print(f"🛡️  Varsayılan admin oluşturuldu → TC: {default_admin_tc} | Şifre: {default_admin_password}")
+        conn.commit()
+
     conn.close()
     print("✅ Veritabanı hazır: users tablosu kontrol edildi/oluşturuldu.")
 
@@ -302,10 +351,14 @@ async def register(req: RegisterRequest):
             bcrypt.gensalt()
         ).decode('utf-8')  # Byte dizisini tekrar string'e çeviriyoruz (veritabanında saklamak için)
 
-        # Kullanıcıyı veritabanına kaydet
+        # Kullanıcıyı veritabanına kaydet (created_at ile birlikte)
         cursor.execute(
-            "INSERT INTO users (tc_no, full_name, phone, password_hash) VALUES (?, ?, ?, ?)",
-            (req.tc_no, req.full_name, req.phone, password_hash)
+            """
+            INSERT INTO users (tc_no, full_name, phone, password_hash, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (req.tc_no, req.full_name, req.phone, password_hash,
+             datetime.utcnow().isoformat())
         )
         conn.commit()
     finally:
@@ -371,7 +424,8 @@ async def login(req: LoginRequest):
             "phone": user['phone'],
             "occupation": user['occupation'] or "",
             "address": user['address'] or "",
-            "profile_picture": (user['profile_picture'] if 'profile_picture' in user.keys() else "") or ""
+            "profile_picture": (user['profile_picture'] if 'profile_picture' in user.keys() else "") or "",
+            "is_admin": bool(user['is_admin']) if 'is_admin' in user.keys() else False
         }
     }
 
@@ -405,7 +459,8 @@ async def get_profile(tc_no: str):
         "phone": user['phone'],
         "occupation": user['occupation'] or "",
         "address": user['address'] or "",
-        "profile_picture": (user['profile_picture'] if 'profile_picture' in user.keys() else "") or ""
+        "profile_picture": (user['profile_picture'] if 'profile_picture' in user.keys() else "") or "",
+        "is_admin": bool(user['is_admin']) if 'is_admin' in user.keys() else False
     }
 
 # ─── 4) PROFİL GÜNCELLE (UPDATE PROFILE) ────────────────────────────────────
@@ -612,6 +667,123 @@ async def analyze_risk(req: AnalyzeRequest):
             "debt": req.debt,
             "loan_amount": req.loan_amount
         }
+    }
+
+# =============================================================================
+# ADMIN GUARD (ROLE-BASED ACCESS CONTROL)
+# =============================================================================
+# Sadece admin yetkili kullanıcıların erişebildiği endpoint'ler için
+# kimlik doğrulama yardımcı fonksiyonu. Header üzerinden gelen X-User-TC
+# değerini DB'den kontrol eder; is_admin = 1 değilse 403 döndürür.
+#
+# NOT: Bu yaklaşım demo amaçlıdır. Production ortamında JWT ya da OAuth
+# tabanlı bir token sistemi kullanılmalıdır.
+
+def require_admin(x_user_tc: Optional[str] = Header(None, alias="X-User-TC")) -> dict:
+    """
+    Admin yetkisi gerektiren endpoint'lerde dependency olarak kullanılır.
+
+    Header: X-User-TC: <kullanıcı tc_no>
+    Davranış:
+      - Header yoksa → 401 Unauthorized
+      - Kullanıcı bulunamazsa → 401 Unauthorized
+      - is_admin = 0 ise → 403 Forbidden
+      - is_admin = 1 ise → kullanıcı objesini döndürür
+    """
+    if not x_user_tc:
+        raise HTTPException(status_code=401, detail="Yetkilendirme bilgisi eksik (X-User-TC).")
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        user = cursor.execute(
+            "SELECT tc_no, full_name, is_admin FROM users WHERE tc_no = ?",
+            (x_user_tc,)
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Kullanıcı bulunamadı.")
+    if not user['is_admin']:
+        raise HTTPException(status_code=403, detail="Bu işlem için yönetici yetkisi gerekiyor.")
+
+    return {"tc_no": user['tc_no'], "full_name": user['full_name'], "is_admin": True}
+
+# =============================================================================
+# ADMIN ENDPOINT'LERİ
+# =============================================================================
+from fastapi import Depends
+
+# ─── 6) ADMIN İSTATİSTİKLERİ ───────────────────────────────────────────────
+@app.get("/api/admin/stats")
+async def admin_stats(admin: dict = Depends(require_admin)):
+    """
+    Admin paneli için özet istatistikleri toplar ve döndürür.
+    require_admin dependency'si ile yetki kontrolü otomatik yapılır.
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # Temel sayımlar
+        total_users = cursor.execute("SELECT COUNT(*) AS c FROM users").fetchone()['c']
+        total_admins = cursor.execute("SELECT COUNT(*) AS c FROM users WHERE is_admin = 1").fetchone()['c']
+        regular_users = total_users - total_admins
+
+        # Profil zenginliği
+        users_with_picture = cursor.execute(
+            "SELECT COUNT(*) AS c FROM users WHERE profile_picture IS NOT NULL AND profile_picture != ''"
+        ).fetchone()['c']
+        users_with_complete = cursor.execute(
+            "SELECT COUNT(*) AS c FROM users WHERE occupation != '' AND address != ''"
+        ).fetchone()['c']
+
+        # Son zaman dilimlerinde kayıt sayıları (created_at boş olmayanlar üzerinden)
+        now = datetime.utcnow()
+        all_users = cursor.execute(
+            "SELECT tc_no, full_name, created_at, is_admin FROM users ORDER BY id DESC"
+        ).fetchall()
+
+        last_24h = 0
+        last_7d = 0
+        for u in all_users:
+            if not u['created_at']:
+                continue
+            try:
+                created = datetime.fromisoformat(u['created_at'])
+                delta = (now - created).total_seconds()
+                if delta <= 86400:           # 24 saat
+                    last_24h += 1
+                if delta <= 604800:          # 7 gün
+                    last_7d += 1
+            except ValueError:
+                continue
+
+        # Son 5 kullanıcı (TC No maskelenmiş güvenlik için)
+        recent_users = []
+        for u in all_users[:5]:
+            tc = u['tc_no']
+            masked_tc = (tc[:3] + '*****' + tc[-3:]) if len(tc) >= 11 else tc
+            recent_users.append({
+                "tc_no_masked": masked_tc,
+                "full_name": u['full_name'],
+                "created_at": u['created_at'],
+                "is_admin": bool(u['is_admin']),
+            })
+    finally:
+        conn.close()
+
+    return {
+        "total_users": total_users,
+        "total_admins": total_admins,
+        "regular_users": regular_users,
+        "users_with_profile_picture": users_with_picture,
+        "users_with_complete_profile": users_with_complete,
+        "last_24h_registrations": last_24h,
+        "last_7d_registrations": last_7d,
+        "recent_users": recent_users,
+        "generated_at": datetime.utcnow().isoformat(),
     }
 
 # =============================================================================

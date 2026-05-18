@@ -3,16 +3,19 @@
  * ==================================================
  * Üst kısımda sabit duran, oturum durumuna göre menü öğeleri değişen
  * kurumsal bir navigasyon çubuğu bileşeni.
- * 
+ *
  * Özellikler:
  * - Sayfa kaydırıldığında arka plan değişir (scroll efekti)
  * - Mobil hamburger menü desteği
  * - Oturum açıksa: Profil ve Çıkış Yap butonları
  * - Oturum kapalıysa: Giriş Yap ve Kayıt Ol butonları
+ * - Admin kullanıcı için "Yönetici Paneli" linki
+ * - TR / EN dil değiştirici (react-i18next)
  */
 
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import {
   Shield,
@@ -24,14 +27,18 @@ import {
   X,
   BarChart3,
   Building2,
-  Package
+  Package,
+  Globe,
+  LayoutDashboard
 } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+  // i18n hook'u: t() çeviri fonksiyonu, i18n nesnesi dil değiştirme için
+  const { t, i18n } = useTranslation();
+
   // Sayfa scroll durumu (navbar arka plan değişimi için)
   const [scrolled, setScrolled] = useState(false);
   // Mobil menü açık/kapalı durumu
@@ -44,8 +51,6 @@ export default function Navbar() {
       setScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
-    // Temizlik (cleanup): Bileşen kaldırıldığında event listener'ı temizle
-    // Bu, bellek sızıntısını (memory leak) önler
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -65,18 +70,32 @@ export default function Navbar() {
   };
 
   /**
+   * Dil değiştirme fonksiyonu (TR ↔ EN toggle).
+   * i18n.changeLanguage çağrısı dahili olarak:
+   *  1. State'i günceller → tüm bileşenler yeniden render olur
+   *  2. localStorage'a kaydeder → sayfa yenilenince seçim hatırlanır
+   */
+  const toggleLanguage = () => {
+    const nextLang = i18n.language === 'tr' ? 'en' : 'tr';
+    i18n.changeLanguage(nextLang);
+  };
+
+  /**
    * Aktif sayfa kontrolü
-   * Mevcut URL path'i ile karşılaştırır, eşleşen bağlantıyı vurgular
    */
   const isActive = (path) => location.pathname === path;
 
-  // Navigasyon bağlantıları listesi
+  // Navigasyon bağlantıları listesi (çeviriden çekilir)
   const navLinks = [
-    { path: '/', label: 'Risk Analizi', icon: BarChart3 },
-    { path: '/bireysel', label: 'Bireysel', icon: User },
-    { path: '/ticari', label: 'Ticari', icon: Building2 },
-    { path: '/urunler', label: 'Ürünler', icon: Package },
+    { path: '/', label: t('navbar.risk_analysis'), icon: BarChart3 },
+    { path: '/bireysel', label: t('navbar.individual'), icon: User },
+    { path: '/ticari', label: t('navbar.commercial'), icon: Building2 },
+    { path: '/urunler', label: t('navbar.products'), icon: Package },
   ];
+
+  // Mevcut dilin kısa kodu (TR / EN — UI'da gösterilir)
+  const currentLangCode = (i18n.language || 'tr').toUpperCase().slice(0, 2);
+  const nextLangCode = currentLangCode === 'TR' ? 'EN' : 'TR';
 
   return (
     <nav
@@ -88,7 +107,7 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          
+
           {/* ─── Logo ve Marka ─── */}
           <Link to="/" className="flex items-center gap-3 group">
             <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 ${
@@ -107,7 +126,7 @@ export default function Navbar() {
               <p className={`text-[10px] font-medium tracking-widest uppercase transition-colors duration-300 ${
                 scrolled ? 'text-slate-400' : 'text-slate-500'
               }`}>
-                Finansal Asistan
+                {t('navbar.brand_tagline')}
               </p>
             </div>
           </Link>
@@ -128,10 +147,37 @@ export default function Navbar() {
                 {label}
               </Link>
             ))}
+
+            {/* Admin kullanıcı için ekstra link */}
+            {user?.is_admin && (
+              <Link
+                to="/admin"
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                  isActive('/admin')
+                    ? 'bg-amber-100 text-amber-700 shadow-sm'
+                    : 'text-amber-600 hover:bg-amber-50'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                {t('navbar.admin_panel')}
+              </Link>
+            )}
           </div>
 
-          {/* ─── Sağ Taraf: Oturum Butonları ─── */}
-          <div className="hidden lg:flex items-center gap-3">
+          {/* ─── Sağ Taraf: Dil + Oturum Butonları ─── */}
+          <div className="hidden lg:flex items-center gap-2">
+
+            {/* Dil Değiştirici (TR/EN) */}
+            <button
+              onClick={toggleLanguage}
+              title={t('navbar.language')}
+              aria-label={`${t('navbar.language')}: ${nextLangCode}`}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-primary-600 transition-all duration-300"
+            >
+              <Globe className="w-4 h-4" />
+              <span>{currentLangCode}</span>
+            </button>
+
             {user ? (
               <>
                 {/* Oturum açıksa: Profil ve Çıkış butonları */}
@@ -163,7 +209,7 @@ export default function Navbar() {
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-300"
                 >
                   <LogOut className="w-4 h-4" />
-                  Çıkış Yap
+                  {t('navbar.logout')}
                 </button>
               </>
             ) : (
@@ -174,33 +220,45 @@ export default function Navbar() {
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-all duration-300"
                 >
                   <LogIn className="w-4 h-4" />
-                  Giriş Yap
+                  {t('navbar.login')}
                 </Link>
                 <Link
                   to="/kayit"
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 shadow-lg shadow-primary-500/25 hover:shadow-xl hover:shadow-primary-500/30 transition-all duration-300 hover:-translate-y-0.5"
                 >
                   <UserPlus className="w-4 h-4" />
-                  Kayıt Ol
+                  {t('navbar.register')}
                 </Link>
               </>
             )}
           </div>
 
-          {/* ─── Mobil Menü Butonu ─── */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2.5 rounded-xl text-slate-600 hover:bg-slate-100 transition-all duration-300"
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          {/* ─── Mobil Sağ Köşe: Dil + Hamburger ─── */}
+          <div className="lg:hidden flex items-center gap-1">
+            {/* Mobilde de dil değiştirici görünür */}
+            <button
+              onClick={toggleLanguage}
+              aria-label={`${t('navbar.language')}: ${nextLangCode}`}
+              className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all duration-300"
+            >
+              <Globe className="w-4 h-4" />
+              <span>{currentLangCode}</span>
+            </button>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2.5 rounded-xl text-slate-600 hover:bg-slate-100 transition-all duration-300"
+              aria-label="Menü"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* ─── Mobil Menü (Açılır Panel) ─── */}
       <div
         className={`lg:hidden transition-all duration-500 ease-in-out overflow-hidden ${
-          mobileMenuOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+          mobileMenuOpen ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
         <div className="bg-white/95 backdrop-blur-xl border-t border-slate-100 shadow-xl px-4 py-4 space-y-1">
@@ -218,7 +276,22 @@ export default function Navbar() {
               {label}
             </Link>
           ))}
-          
+
+          {/* Mobil: Admin Linki */}
+          {user?.is_admin && (
+            <Link
+              to="/admin"
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                isActive('/admin')
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'text-amber-600 hover:bg-amber-50'
+              }`}
+            >
+              <LayoutDashboard className="w-5 h-5" />
+              {t('navbar.admin_panel')}
+            </Link>
+          )}
+
           <div className="border-t border-slate-100 pt-3 mt-3 space-y-1">
             {user ? (
               <>
@@ -227,14 +300,14 @@ export default function Navbar() {
                   className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all duration-300"
                 >
                   <User className="w-5 h-5" />
-                  Profilim
+                  {t('navbar.profile')}
                 </Link>
                 <button
                   onClick={handleLogout}
                   className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-300 w-full text-left"
                 >
                   <LogOut className="w-5 h-5" />
-                  Çıkış Yap
+                  {t('navbar.logout')}
                 </button>
               </>
             ) : (
@@ -244,14 +317,14 @@ export default function Navbar() {
                   className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all duration-300"
                 >
                   <LogIn className="w-5 h-5" />
-                  Giriş Yap
+                  {t('navbar.login')}
                 </Link>
                 <Link
                   to="/kayit"
                   className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-primary-600 to-primary-700 transition-all duration-300"
                 >
                   <UserPlus className="w-5 h-5" />
-                  Kayıt Ol
+                  {t('navbar.register')}
                 </Link>
               </>
             )}

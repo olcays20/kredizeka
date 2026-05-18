@@ -6,7 +6,7 @@
  */
 
 import { Link } from 'react-router-dom';
-import { Shield, Phone, Mail, MapPin, ChevronRight } from 'lucide-react';
+import { Shield, Phone, Mail, MapPin, ChevronRight, AlertTriangle } from 'lucide-react';
 
 // Sosyal medya ikonları için inline SVG bileşenleri (Lucide marka ikonu içermediğinden)
 const LinkedInIcon = () => (
@@ -176,13 +176,35 @@ export default function Footer() {
           </div>
         </div>
 
+        {/* ─── YASAL UYARI (DISCLAIMER) ─── */}
+        <div className="py-8 border-t border-white/10">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 md:p-6">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-bold tracking-wider uppercase text-amber-300 mb-2">
+                  Yasal Uyarı
+                </h4>
+                <p className="text-amber-100/90 text-sm leading-relaxed">
+                  Bu web sitesi <strong className="text-amber-200">ticari bir faaliyet göstermemektedir</strong>.
+                  Tamamen eğitim, akademik portföy ve teknoloji simülasyonu amacıyla geliştirilmiş bir
+                  test (demo) ortamıdır. Sitede yer alan veriler, haberler ve risk analiz sonuçları
+                  gerçek dışıdır ve hiçbir finansal tavsiye niteliği taşımaz.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* ─── Alt Kısım: Telif Hakkı ─── */}
-        <div className="py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="py-6 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-white/10">
           <p className="text-slate-500 text-xs text-center md:text-left">
-            © {currentYear} KrediZeka Finansal Teknoloji A.Ş. Tüm hakları saklıdır.
+            © {currentYear} KrediZeka — Akademik portföy projesi. Tüm hakları saklıdır.
           </p>
           <div className="flex items-center gap-1 text-slate-500 text-xs">
-            <span>BDDK ve KVKK düzenlemelerine uygun olarak hizmet verilmektedir.</span>
+            <span>Eğitim ve teknoloji gösterimi amacıyla geliştirilmiştir.</span>
           </div>
         </div>
       </div>

@@ -54,7 +54,9 @@ def get_db_connection():
 def init_database():
     """
     Uygulama ilk çalıştırıldığında veritabanı tablosunu oluşturur.
-    
+    Ayrıca mevcut veritabanlarına eksik sütunları (ör. profile_picture) ekler
+    — bu sayede şema göçü (schema migration) otomatik gerçekleşir.
+
     'users' tablosu:
       - id: Otomatik artan birincil anahtar (primary key)
       - tc_no: T.C. Kimlik Numarası (benzersiz - unique)
@@ -63,7 +65,8 @@ def init_database():
       - password_hash: Bcrypt ile şifrelenmiş (hash'lenmiş) parola
       - occupation: Meslek bilgisi (isteğe bağlı, sonradan güncellenebilir)
       - address: Adres bilgisi (isteğe bağlı, sonradan güncellenebilir)
-    
+      - profile_picture: Base64 olarak kodlanmış profil fotoğrafı (data:image/...)
+
     IF NOT EXISTS: Tablo zaten varsa tekrar oluşturmaz, hata vermez.
     """
     conn = get_db_connection()
@@ -76,9 +79,18 @@ def init_database():
             phone TEXT NOT NULL,
             password_hash TEXT NOT NULL,
             occupation TEXT DEFAULT '',
-            address TEXT DEFAULT ''
+            address TEXT DEFAULT '',
+            profile_picture TEXT DEFAULT ''
         )
     """)
+
+    # Mevcut veritabanlarında eksik sütunları otomatik ekle (idempotent migration)
+    # PRAGMA table_info -> tablonun mevcut sütun listesini döndürür
+    existing_columns = {row['name'] for row in cursor.execute("PRAGMA table_info(users)").fetchall()}
+    if 'profile_picture' not in existing_columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN profile_picture TEXT DEFAULT ''")
+        print("🔄 Migration: 'profile_picture' sütunu eklendi.")
+
     conn.commit()
     conn.close()
     print("✅ Veritabanı hazır: users tablosu kontrol edildi/oluşturuldu.")
@@ -118,10 +130,31 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=6)
 
 class ProfileUpdateRequest(BaseModel):
-    """Profil güncelleme isteği için beklenen veri yapısı"""
+    """
+    Profil güncelleme isteği için beklenen veri yapısı.
+
+    profile_picture: 'data:image/png;base64,iVBORw0KG...' formatında Base64 string.
+    Frontend, kullanıcının seçtiği görseli FileReader API ile Base64'e çevirir
+    ve bu alana koyar. None → değişiklik yok. '' → fotoğrafı sil.
+    """
     tc_no: str = Field(..., min_length=11, max_length=11)
     occupation: str = Field("", max_length=200, description="Meslek")
     address: str = Field("", max_length=500, description="Adres")
+    profile_picture: Optional[str] = Field(None, description="Base64 kodlu profil fotoğrafı (data:image/...)")
+
+    @field_validator('profile_picture')
+    @classmethod
+    def validate_profile_picture(cls, v):
+        if v is None or v == '':
+            return v
+        # Base64 görsel formatı doğrulaması: 'data:image/...;base64,...' ile başlamalı
+        if not v.startswith('data:image/'):
+            raise ValueError("Profil fotoğrafı 'data:image/...' formatında olmalıdır.")
+        # Boyut kontrolü (yaklaşık ~2MB Base64 ≈ 1.5MB ham görsel)
+        # Aşırı büyük fotoğraflar veritabanını ve isteği şişirir
+        if len(v) > 2_800_000:
+            raise ValueError("Profil fotoğrafı 2 MB'tan büyük olamaz.")
+        return v
 
 class AnalyzeRequest(BaseModel):
     """
@@ -337,7 +370,8 @@ async def login(req: LoginRequest):
             "full_name": user['full_name'],
             "phone": user['phone'],
             "occupation": user['occupation'] or "",
-            "address": user['address'] or ""
+            "address": user['address'] or "",
+            "profile_picture": (user['profile_picture'] if 'profile_picture' in user.keys() else "") or ""
         }
     }
 
@@ -370,17 +404,23 @@ async def get_profile(tc_no: str):
         "full_name": user['full_name'],
         "phone": user['phone'],
         "occupation": user['occupation'] or "",
-        "address": user['address'] or ""
+        "address": user['address'] or "",
+        "profile_picture": (user['profile_picture'] if 'profile_picture' in user.keys() else "") or ""
     }
 
 # ─── 4) PROFİL GÜNCELLE (UPDATE PROFILE) ────────────────────────────────────
 @app.put("/api/profile")
 async def update_profile(req: ProfileUpdateRequest):
     """
-    Kullanıcının meslek ve adres bilgilerini günceller.
-    
+    Kullanıcının meslek, adres ve profil fotoğrafı bilgilerini günceller.
+
     HTTP PUT Metodu: Kaynağın tamamını veya bir kısmını günceller.
-    
+
+    Davranış (profile_picture):
+    - None gönderilirse → fotoğraf değişmez (mevcut değer korunur).
+    - '' (boş string) gönderilirse → fotoğraf silinir.
+    - 'data:image/...' formatında değer gönderilirse → güncellenir.
+
     Hata Durumları:
     - 404: T.C. No ile eşleşen kullanıcı bulunamazsa
     """
@@ -393,11 +433,19 @@ async def update_profile(req: ProfileUpdateRequest):
         if not user:
             raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
 
-        # Meslek ve adres bilgilerini güncelle
-        cursor.execute(
-            "UPDATE users SET occupation = ?, address = ? WHERE tc_no = ?",
-            (req.occupation, req.address, req.tc_no)
-        )
+        # Profil fotoğrafı isteğe bağlıdır:
+        #   None  → sadece meslek/adres güncellenir, fotoğraf değişmez
+        #   string → fotoğraf değişir (boş string = silme)
+        if req.profile_picture is None:
+            cursor.execute(
+                "UPDATE users SET occupation = ?, address = ? WHERE tc_no = ?",
+                (req.occupation, req.address, req.tc_no)
+            )
+        else:
+            cursor.execute(
+                "UPDATE users SET occupation = ?, address = ?, profile_picture = ? WHERE tc_no = ?",
+                (req.occupation, req.address, req.profile_picture, req.tc_no)
+            )
         conn.commit()
     finally:
         conn.close()

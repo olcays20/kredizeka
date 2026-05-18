@@ -3,8 +3,12 @@
  * =============================
  * Açık iş pozisyonları, şirket avantajları ve yan hakları listeleyen
  * kurumsal kariyer tanıtım sayfası.
+ *
+ * "Başvur" butonları /is-basvurusu sayfasına yönlendirir ve URL query
+ * parametresi ile pozisyon adını taşır.
  */
 
+import { Link } from 'react-router-dom';
 import {
   Briefcase,
   Clock,
@@ -48,7 +52,7 @@ const reasons = [
   },
 ];
 
-// Açık pozisyonlar
+// Açık pozisyonlar (IsBasvurusuPage'deki dropdown ile senkron olmalı)
 const positions = [
   {
     title: 'Kıdemli Backend Geliştirici',
@@ -119,7 +123,7 @@ export default function KariyerPage() {
             Finansal teknolojiyi yeniden tanımlayan KrediZeka ekibine katılın. Fintech'in geleceğini
             birlikte inşa edelim — yetenekli, tutkulu ve meraklı kişileri arıyoruz.
           </p>
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center flex-wrap gap-4">
             <span className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 text-sm font-medium text-slate-600">
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
               Rekabetçi maaş
@@ -167,7 +171,7 @@ export default function KariyerPage() {
           </h2>
           <p className="text-slate-500 max-w-xl mx-auto">
             Aşağıdaki pozisyonlardan size uygun olanı seçin ve başvurunuzu gönderin.
-            Tüm başvurular 5 iş günü içinde değerlendirilir.
+            Tüm başvurular 7 iş günü içinde değerlendirilir.
           </p>
         </div>
         <div className="flex flex-col gap-4">
@@ -179,13 +183,10 @@ export default function KariyerPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 {/* Sol: Pozisyon Detayları */}
                 <div className="flex-1">
-                  {/* Departman badge */}
                   <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 ${deptColor}`}>
                     {department}
                   </span>
-                  {/* Pozisyon adı */}
                   <h3 className="text-xl font-bold text-slate-900 mb-3">{title}</h3>
-                  {/* Konum ve tür chip'leri */}
                   <div className="flex items-center flex-wrap gap-3">
                     <span className="flex items-center gap-1.5 text-sm text-slate-500">
                       <MapPin className="w-3.5 h-3.5 text-slate-400" />
@@ -198,15 +199,15 @@ export default function KariyerPage() {
                     </span>
                   </div>
                 </div>
-                {/* Sağ: Başvur Butonu */}
+                {/* Sağ: Başvur Butonu — /is-basvurusu'a pozisyon parametresiyle */}
                 <div className="md:flex-shrink-0">
-                  <button
-                    className="btn-primary flex items-center gap-2 py-2.5 px-6 text-sm"
-                    onClick={() => window.open(`mailto:kariyer@kredizeka.com?subject=${encodeURIComponent(title + ' - Başvuru')}`, '_blank')}
+                  <Link
+                    to={`/is-basvurusu?pozisyon=${encodeURIComponent(title)}`}
+                    className="btn-primary inline-flex items-center gap-2 py-2.5 px-6 text-sm"
                   >
                     Başvur
                     <ArrowRight className="w-4 h-4" />
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -214,9 +215,12 @@ export default function KariyerPage() {
         </div>
         <p className="text-center text-sm text-slate-400 mt-6">
           Uygun bir pozisyon bulamadınız mı?{' '}
-          <a href="mailto:kariyer@kredizeka.com" className="text-primary-600 font-semibold hover:underline">
+          <Link
+            to="/is-basvurusu?pozisyon=Açık%20Başvuru%20—%20Diğer"
+            className="text-primary-600 font-semibold hover:underline"
+          >
             Açık başvuru gönderin
-          </a>
+          </Link>
           {' '}— iyi bir yeteneği asla kaçırmayız.
         </p>
       </section>

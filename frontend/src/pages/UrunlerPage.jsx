@@ -2,9 +2,12 @@
  * KrediZeka - Ürünler Sayfası
  * ==============================
  * Tüm finansal ürünlerin listelendiği kurumsal tanıtım sayfası.
+ *
+ * NOT: KrediZeka yalnızca web tabanlı bir platformdur. Bu sayfada mobil
+ * uygulama veya app store yönlendirmesi bulunmaz.
  */
 
-import { Package, CreditCard, PiggyBank, TrendingUp, Shield, Smartphone, Wallet, BadgePercent, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Package, CreditCard, PiggyBank, TrendingUp, Shield, Globe, Wallet, BadgePercent, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function UrunlerPage() {
@@ -26,8 +29,8 @@ export default function UrunlerPage() {
       features: ['Hayat sigortası', 'Sağlık sigortası', 'Kasko & trafik', 'Konut sigortası'],
     },
     {
-      icon: Smartphone, title: 'Dijital Bankacılık', color: 'from-pink-500 to-pink-600',
-      features: ['Mobil uygulama', 'Anlık bildirimler', 'QR ile ödeme', '7/24 erişim'],
+      icon: Globe, title: 'Online Bankacılık', color: 'from-pink-500 to-pink-600',
+      features: ['Tarayıcı üzerinden erişim', 'Anlık bildirimler', 'Hızlı transfer', '7/24 erişim'],
     },
     {
       icon: BadgePercent, title: 'Kampanyalar', color: 'from-teal-500 to-teal-600',
@@ -48,7 +51,7 @@ export default function UrunlerPage() {
             Finansal <span className="gradient-text">Ürünlerimiz</span>
           </h1>
           <p className="text-lg text-slate-500 max-w-2xl mx-auto">
-            İhtiyacınıza uygun ürünü keşfedin, dijital bankacılığın avantajlarından yararlanın.
+            İhtiyacınıza uygun ürünü keşfedin, online bankacılığın avantajlarından yararlanın.
           </p>
         </div>
       </section>

@@ -25,6 +25,8 @@ const UrunlerPage = lazy(() => import('./pages/UrunlerPage'));
 const HakkimizdaPage = lazy(() => import('./pages/HakkimizdaPage'));
 const KariyerPage = lazy(() => import('./pages/KariyerPage'));
 const BasinOdasiPage = lazy(() => import('./pages/BasinOdasiPage'));
+const HaberlerPage = lazy(() => import('./pages/HaberlerPage'));
+const IsBasvurusuPage = lazy(() => import('./pages/IsBasvurusuPage'));
 const GizlilikPolitikasiPage = lazy(() => import('./pages/GizlilikPolitikasiPage'));
 const KullanimKosullariPage = lazy(() => import('./pages/KullanimKosullariPage'));
 
@@ -81,7 +83,9 @@ function App() {
                 <Route path="/urunler" element={<UrunlerPage />} />
                 <Route path="/hakkimizda" element={<HakkimizdaPage />} />
                 <Route path="/kariyer" element={<KariyerPage />} />
+                <Route path="/is-basvurusu" element={<IsBasvurusuPage />} />
                 <Route path="/basin-odasi" element={<BasinOdasiPage />} />
+                <Route path="/haberler" element={<HaberlerPage />} />
                 <Route path="/gizlilik-politikasi" element={<GizlilikPolitikasiPage />} />
                 <Route path="/kullanim-kosullari" element={<KullanimKosullariPage />} />
               </Routes>

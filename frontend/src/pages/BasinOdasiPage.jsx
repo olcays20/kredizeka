@@ -1,10 +1,16 @@
 /**
  * KrediZeka - Basın Odası Sayfası
  * ==================================
- * Basın bültenleri, medya kit ve basın iletişim bilgilerini içeren
- * kurumsal basın odası sayfası.
+ * Basın bültenleri (öne çıkan haberler), medya kit ve basın iletişim
+ * bilgilerini içeren kurumsal basın odası sayfası.
+ *
+ * Haber kaynağı: src/data/newsData.js (tek kaynak prensibi - single source of truth).
+ * "Devamını Oku" tıklanan haberi NewsModal bileşeniyle modal olarak gösterir.
+ * "Tüm Haberler" linki /haberler sayfasına yönlendirir.
  */
 
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Newspaper,
   Calendar,
@@ -17,42 +23,11 @@ import {
   Clock,
   ArrowRight,
 } from 'lucide-react';
+import { news } from '../data/newsData';
+import NewsModal from '../components/NewsModal';
 
-// Basın bültenleri / haberler
-const news = [
-  {
-    date: 'Mart 2025',
-    tag: 'Yatırım',
-    tagColor: 'bg-emerald-100 text-emerald-700',
-    title: 'KrediZeka 10 Milyon TL Yatırım Aldı',
-    summary:
-      'Türkiye\'nin önde gelen fintech yatırım fonu Tekfen Ventures liderliğinde gerçekleştirilen A serisi turda KrediZeka, teknolojisini ölçeklendirmek ve yeni pazarlara açılmak için 10 milyon TL finansman sağladı.',
-  },
-  {
-    date: 'Şubat 2025',
-    tag: 'Teknoloji',
-    tagColor: 'bg-blue-100 text-blue-700',
-    title: 'Yapay Zeka Destekli Risk Skoru Algoritması Patent Aldı',
-    summary:
-      'KrediZeka\'nın geliştirdiği, gelir-borç-kredi oranlarını birleştirerek anlık risk skoru hesaplayan Random Forest tabanlı algoritmaya Türk Patent ve Marka Kurumu tarafından patent belgesi verildi.',
-  },
-  {
-    date: 'Ocak 2025',
-    tag: 'Regülasyon',
-    tagColor: 'bg-violet-100 text-violet-700',
-    title: 'BDDK Lisans Belgesi Teslim Töreni Gerçekleşti',
-    summary:
-      'Bankacılık Düzenleme ve Denetleme Kurumu (BDDK) tarafından KrediZeka\'ya verilen finansal danışmanlık platformu faaliyet belgesi, Ankara\'da düzenlenen törenle teslim edildi.',
-  },
-  {
-    date: 'Aralık 2024',
-    tag: 'Büyüme',
-    tagColor: 'bg-amber-100 text-amber-700',
-    title: 'KrediZeka 50.000 Kullanıcıya Ulaştı',
-    summary:
-      'Hizmete girişinin üzerinden yalnızca 12 ay geçmesine rağmen KrediZeka, 50.000 kayıtlı kullanıcı ve 1.2 milyar TL toplam analiz hacmi ile Türkiye\'nin en hızlı büyüyen fintech platformları arasına girdi.',
-  },
-];
+// Basın Odası sayfasında ilk 4 haberi göster (en yeniler)
+const featuredNews = news.slice(0, 4);
 
 // Medya kit indirimleri
 const mediaKit = [
@@ -77,6 +52,9 @@ const mediaKit = [
 ];
 
 export default function BasinOdasiPage() {
+  // Aktif modal'da gösterilen haber (null → modal kapalı)
+  const [selectedNews, setSelectedNews] = useState(null);
+
   return (
     <div className="min-h-screen pt-24 pb-16">
 
@@ -103,46 +81,64 @@ export default function BasinOdasiPage() {
 
       {/* ─── SON HABERLER ─── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-10">
           <div>
             <h2 className="text-3xl font-extrabold text-slate-900 mb-1">
               Son <span className="gradient-text">Haberler</span>
             </h2>
             <p className="text-slate-500 text-sm">En güncel basın bültenlerimiz ve haberlerimiz</p>
           </div>
-          <button className="hidden md:flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700 transition-colors">
-            Tüm Haberler
-            <ChevronRight className="w-4 h-4" />
-          </button>
+          <Link
+            to="/haberler"
+            className="flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700 transition-colors group"
+          >
+            Tümünü Gör
+            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </Link>
         </div>
         <div className="grid md:grid-cols-2 gap-6">
-          {news.map(({ date, tag, tagColor, title, summary }) => (
-            <div key={title} className="card p-8 group flex flex-col">
+          {featuredNews.map((item) => (
+            <article key={item.id} className="card p-8 group flex flex-col">
               {/* Üst: tarih + tag */}
               <div className="flex items-center gap-3 mb-4">
                 <span className="flex items-center gap-1.5 text-xs text-slate-400">
                   <Calendar className="w-3 h-3" />
-                  {date}
+                  {item.date}
                 </span>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${tagColor}`}>
-                  {tag}
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${item.tagColor}`}>
+                  {item.tag}
                 </span>
               </div>
               {/* Başlık */}
               <h3 className="text-lg font-bold text-slate-900 mb-3 leading-snug group-hover:text-primary-700 transition-colors duration-300">
-                {title}
+                {item.title}
               </h3>
               {/* Özet */}
               <p className="text-sm text-slate-500 leading-relaxed flex-1 mb-5">
-                {summary}
+                {item.summary}
               </p>
               {/* Devamını Oku */}
-              <button className="self-start flex items-center gap-1.5 text-sm font-semibold text-primary-600 hover:text-primary-800 transition-colors duration-300 group/btn">
+              <button
+                type="button"
+                onClick={() => setSelectedNews(item)}
+                className="self-start flex items-center gap-1.5 text-sm font-semibold text-primary-600 hover:text-primary-800 transition-colors duration-300 group/btn"
+              >
                 Devamını Oku
                 <ChevronRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform duration-300" />
               </button>
-            </div>
+            </article>
           ))}
+        </div>
+
+        {/* Mobile: Tümünü Gör butonu altta */}
+        <div className="mt-10 text-center">
+          <Link
+            to="/haberler"
+            className="btn-secondary inline-flex items-center gap-2"
+          >
+            Tüm Haberleri Gör
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
       </section>
 
@@ -211,6 +207,9 @@ export default function BasinOdasiPage() {
           </div>
         </div>
       </section>
+
+      {/* Haber Detay Modalı */}
+      <NewsModal item={selectedNews} onClose={() => setSelectedNews(null)} />
     </div>
   );
 }

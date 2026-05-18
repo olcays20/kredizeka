@@ -143,10 +143,18 @@ export default function Navbar() {
                       : 'text-slate-700 hover:bg-slate-100'
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">
-                      {user.full_name?.charAt(0)?.toUpperCase() || 'K'}
-                    </span>
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center overflow-hidden">
+                    {user.profile_picture ? (
+                      <img
+                        src={user.profile_picture}
+                        alt={user.full_name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-white text-xs font-bold">
+                        {user.full_name?.charAt(0)?.toUpperCase() || 'K'}
+                      </span>
+                    )}
                   </div>
                   <span className="max-w-[120px] truncate">{user.full_name}</span>
                 </Link>

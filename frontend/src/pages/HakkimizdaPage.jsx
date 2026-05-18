@@ -50,31 +50,31 @@ const values = [
   },
 ];
 
-// Ekip üyeleri
+// Kurucu ekip üyeleri (kurumsal Türk erkek isimleri)
 const team = [
   {
-    name: 'Ahmet Yılmaz',
+    name: 'Cenk Yılmaz',
     title: 'CEO & Kurucu Ortak',
-    initials: 'AY',
+    initials: 'CY',
     from: 'from-primary-500',
     to: 'to-primary-700',
-    bio: '15 yıllık fintech ve bankacılık sektörü deneyimi. Önceki görev: Garanti BBVA Dijital Dönüşüm Direktörü.',
+    bio: '15 yıllık fintech ve dijital bankacılık sektörü deneyimi. Stratejik liderlik ve yapay zekâ tabanlı finansal ürün geliştirme alanlarında uzmanlık.',
   },
   {
-    name: 'Zeynep Kaya',
+    name: 'Kaan Demir',
     title: 'CTO & Kurucu Ortak',
-    initials: 'ZK',
+    initials: 'KD',
     from: 'from-accent-500',
     to: 'to-accent-700',
-    bio: 'Boğaziçi Üniversitesi Yapay Zeka doktorası. 10 yıllık ML mühendisliği. Önceki görev: Google Brain Research.',
+    bio: 'Bilgisayar Mühendisliği doktorası. 12 yıllık makine öğrenmesi ve büyük veri altyapısı deneyimi. KrediZeka ML pipeline mimarisinin baş tasarımcısı.',
   },
   {
-    name: 'Murat Demir',
+    name: 'Burak Aydın',
     title: 'CPO — Ürün Yöneticisi',
-    initials: 'MD',
+    initials: 'BA',
     from: 'from-violet-500',
     to: 'to-violet-700',
-    bio: 'ODTÜ Endüstri Mühendisliği mezunu. Kullanıcı odaklı ürün geliştirme uzmanı. 8 yıllık finans ürünü deneyimi.',
+    bio: 'Endüstri Mühendisliği mezunu. Kullanıcı odaklı ürün geliştirme ve veriye dayalı karar süreçleri uzmanı. 8 yıllık finansal ürün stratejisi tecrübesi.',
   },
 ];
 

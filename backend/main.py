@@ -14,11 +14,9 @@ Bu sürümle birlikte:
     Docker :  docker compose up --build
 """
 
-from __future__ import annotations
-
 import os
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import bcrypt
 import joblib

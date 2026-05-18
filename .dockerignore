@@ -1,0 +1,17 @@
+# Docker build context optimizasyonu
+.git
+.gitignore
+.env
+.env.*
+*.md
+.vscode
+.idea
+__pycache__
+*.pyc
+node_modules
+venv
+backend/venv
+backend/__pycache__
+frontend/node_modules
+frontend/dist
+backend/kredizeka.db

@@ -1,586 +1,511 @@
 """
-KrediZeka - FastAPI Arka Yüz (Backend) Sunucusu
-=================================================
-Bu dosya, KrediZeka uygulamasının tüm API uç noktalarını (endpoints) içerir.
-SQLite veritabanı, kullanıcı kimlik doğrulaması ve ML model tahminlemesi
-bu sunucu üzerinden yönetilir.
+KrediZeka - FastAPI Backend (Enterprise Edition)
+==================================================
+Bu sürümle birlikte:
+  • PostgreSQL + SQLAlchemy 2.0 ORM (SQLite fallback ile geriye uyumlu)
+  • XGBoost + SHAP açıklanabilir yapay zekâ
+  • slowapi tabanlı rate limiting (login/register/analyze)
+  • BackgroundTasks ile e-posta simülasyonu (asenkron)
+  • Pydantic Settings ile ortam değişkeni yönetimi
+  • Idempotent schema migration + ilk açılışta admin oluşturma
 
 Çalıştırma:
-    uvicorn main:app --reload --port 8000
-
-Swagger Dokümantasyonu:
-    http://localhost:8000/docs
+    Yerel  :  uvicorn main:app --reload --port 8000
+    Docker :  docker compose up --build
 """
 
+from __future__ import annotations
+
 import os
-import sqlite3
-import joblib
-import bcrypt
-import pandas as pd
-import numpy as np
-from contextlib import asynccontextmanager
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, Header
+from typing import Optional, List
+
+import bcrypt
+import joblib
+import numpy as np
+import pandas as pd
+from fastapi import (
+    FastAPI, HTTPException, Header, Depends, BackgroundTasks, Request
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional
+from sqlalchemy import inspect, text
+from sqlalchemy.orm import Session
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+from config import settings
+from database import engine, SessionLocal, Base, get_db
+from models import User
+from services.email_service import (
+    send_welcome_email, send_analysis_report_email, send_login_notification
+)
+
 
 # =============================================================================
-# GLOBAL DEĞİŞKENLER
+# RATE LIMITER (slowapi)
 # =============================================================================
-# Veritabanı ve ML modeli sunucu başlatılırken yüklenir ve burada saklanır.
-DATABASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kredizeka.db")
-MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "loan_risk_pipeline.pkl")
+# get_remote_address: İstemci IP'sini X-Forwarded-For veya direct connection'dan alır
+# Limit aşılırsa otomatik HTTP 429 döndürülür
+limiter = Limiter(key_func=get_remote_address)
 
-# ML modeli bellekte tutulacak (her istekte diskten okumamak için)
-ml_model = None
 
 # =============================================================================
-# VERİTABANI İŞLEMLERİ
+# ML MODEL BUNDLE (Singleton)
+# =============================================================================
+# Sunucu başlangıcında yüklenir; sonraki istekler bellekten kullanır
+ml_bundle: Optional[dict] = None
+
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), settings.model_path)
+
+
+# =============================================================================
+# ŞEMA OLUŞTURMA + İLK ADMİN
 # =============================================================================
 
-def get_db_connection():
+def init_database() -> None:
     """
-    SQLite veritabanına yeni bir bağlantı oluşturur.
-    
-    row_factory = sqlite3.Row ayarı, sorgu sonuçlarının sözlük (dict) gibi
-    erişilebilir olmasını sağlar. Örn: row['full_name'] şeklinde kullanılır.
+    Veritabanı şemasını oluşturur ve gerekli ilk verileri yükler.
+
+    1. Tüm ORM modellerini tablolara dönüştürür (CREATE IF NOT EXISTS).
+    2. Sistemde admin yoksa varsayılan admin'i oluşturur.
+    3. (Geriye uyumluluk) Eski SQLite şemasında eksik kolonları ekler.
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    Base.metadata.create_all(bind=engine)
+    print("✅ Veritabanı şeması hazır: tüm tablolar kontrol edildi.")
 
-def init_database():
+    # Eski SQLite veritabanlarında schema migration (yeni kolonlar)
+    # PostgreSQL'de CREATE_ALL zaten doğru sütunları oluşturduğu için no-op olur
+    _legacy_migrate()
+
+    # İlk admin'i oluştur
+    with SessionLocal() as db:
+        admin_count = db.query(User).filter(User.is_admin.is_(True)).count()
+        if admin_count == 0:
+            existing = db.query(User).filter(User.tc_no == settings.default_admin_tc).first()
+            if existing:
+                existing.is_admin = True
+                db.commit()
+                print(f"🛡️  Mevcut kullanıcı admin yapıldı: TC={settings.default_admin_tc}")
+            else:
+                password_hash = bcrypt.hashpw(
+                    settings.default_admin_password.encode("utf-8"),
+                    bcrypt.gensalt()
+                ).decode("utf-8")
+                admin = User(
+                    tc_no=settings.default_admin_tc,
+                    full_name=settings.default_admin_name,
+                    phone="00000000000",
+                    password_hash=password_hash,
+                    is_admin=True,
+                )
+                db.add(admin)
+                db.commit()
+                print(
+                    f"🛡️  Varsayılan admin oluşturuldu → "
+                    f"TC: {settings.default_admin_tc} | "
+                    f"Şifre: {settings.default_admin_password}"
+                )
+
+
+def _legacy_migrate() -> None:
     """
-    Uygulama ilk çalıştırıldığında veritabanı tablosunu oluşturur.
-    Ayrıca mevcut veritabanlarına eksik sütunları (profile_picture, is_admin,
-    created_at) ekler — şema göçü (schema migration) otomatik gerçekleşir.
-
-    'users' tablosu:
-      - id: Otomatik artan birincil anahtar (primary key)
-      - tc_no: T.C. Kimlik Numarası (benzersiz - unique)
-      - full_name: Ad Soyad
-      - phone: Cep telefonu numarası
-      - password_hash: Bcrypt ile şifrelenmiş (hash'lenmiş) parola
-      - occupation: Meslek bilgisi
-      - address: Adres bilgisi
-      - profile_picture: Base64 olarak kodlanmış profil fotoğrafı
-      - is_admin: 1 ise admin, 0 ise normal kullanıcı (RBAC için)
-      - created_at: Kayıt tarihi (ISO 8601 formatında)
-
-    Ek olarak: Sistemde hiç admin yoksa varsayılan admin hesabı oluşturur:
-      - T.C.: 11111111111
-      - Şifre: admin123
+    Eski SQLite kurulumlarda eksik kolonları ekler.
+    PostgreSQL üzerinde Base.metadata.create_all bunu zaten halleder.
     """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tc_no TEXT UNIQUE NOT NULL,
-            full_name TEXT NOT NULL,
-            phone TEXT NOT NULL,
-            password_hash TEXT NOT NULL,
-            occupation TEXT DEFAULT '',
-            address TEXT DEFAULT '',
-            profile_picture TEXT DEFAULT '',
-            is_admin INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT ''
-        )
-    """)
+    if not settings.database_url.startswith("sqlite"):
+        return  # PostgreSQL — gerek yok
 
-    # ─── Mevcut veritabanlarına eksik sütunları otomatik ekle ──────────────
-    # PRAGMA table_info -> tablonun mevcut sütun listesini döndürür
-    existing_columns = {row['name'] for row in cursor.execute("PRAGMA table_info(users)").fetchall()}
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
 
-    if 'profile_picture' not in existing_columns:
-        cursor.execute("ALTER TABLE users ADD COLUMN profile_picture TEXT DEFAULT ''")
-        print("🔄 Migration: 'profile_picture' sütunu eklendi.")
+    existing_cols = {col["name"] for col in inspector.get_columns("users")}
+    migrations = {
+        "profile_picture": "ALTER TABLE users ADD COLUMN profile_picture TEXT DEFAULT ''",
+        "is_admin": "ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0",
+        "created_at": "ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT ''",
+    }
+    with engine.begin() as conn:
+        for col, sql in migrations.items():
+            if col not in existing_cols:
+                conn.execute(text(sql))
+                print(f"🔄 SQLite migration: '{col}' kolonu eklendi.")
 
-    if 'is_admin' not in existing_columns:
-        cursor.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0")
-        print("🔄 Migration: 'is_admin' sütunu eklendi.")
-
-    if 'created_at' not in existing_columns:
-        cursor.execute("ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT ''")
-        print("🔄 Migration: 'created_at' sütunu eklendi.")
-
-    conn.commit()
-
-    # ─── Varsayılan Admin Hesabını Oluştur (yoksa) ─────────────────────────
-    # Sistemde hiç admin yoksa otomatik olarak varsayılan bir admin yarat.
-    # Bu sayede her yeni kurulumda admin paneli erişilebilir olur.
-    admin_count = cursor.execute("SELECT COUNT(*) AS cnt FROM users WHERE is_admin = 1").fetchone()['cnt']
-    if admin_count == 0:
-        default_admin_tc = "11111111111"
-        default_admin_password = "admin123"
-        # Zaten bu TC ile bir kullanıcı varsa onu admin yap, yoksa yeni oluştur
-        existing_user = cursor.execute(
-            "SELECT id FROM users WHERE tc_no = ?", (default_admin_tc,)
-        ).fetchone()
-        if existing_user:
-            cursor.execute(
-                "UPDATE users SET is_admin = 1 WHERE tc_no = ?", (default_admin_tc,)
-            )
-            print(f"🛡️  Mevcut kullanıcı admin yapıldı: TC={default_admin_tc}")
-        else:
-            password_hash = bcrypt.hashpw(
-                default_admin_password.encode('utf-8'),
-                bcrypt.gensalt()
-            ).decode('utf-8')
-            cursor.execute(
-                """
-                INSERT INTO users (tc_no, full_name, phone, password_hash, is_admin, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (default_admin_tc, "KrediZeka Yönetici", "00000000000",
-                 password_hash, 1, datetime.utcnow().isoformat())
-            )
-            print(f"🛡️  Varsayılan admin oluşturuldu → TC: {default_admin_tc} | Şifre: {default_admin_password}")
-        conn.commit()
-
-    conn.close()
-    print("✅ Veritabanı hazır: users tablosu kontrol edildi/oluşturuldu.")
 
 # =============================================================================
-# PYDANTIC MODELLER (Veri Şemaları)
+# PYDANTIC ŞEMALAR
 # =============================================================================
-# Pydantic modelleri, API'ye gelen isteklerin otomatik doğrulanmasını sağlar.
-# Yanlış tipte veri geldiğinde FastAPI otomatik olarak 422 hatası döndürür.
 
 class RegisterRequest(BaseModel):
-    """Kayıt olma isteği için beklenen veri yapısı"""
-    tc_no: str = Field(..., min_length=11, max_length=11, description="11 haneli T.C. Kimlik No")
-    full_name: str = Field(..., min_length=2, max_length=100, description="Ad Soyad")
-    phone: str = Field(..., min_length=11, max_length=11, description="11 haneli cep telefonu")
-    password: str = Field(..., min_length=6, max_length=100, description="Parola (min 6 karakter)")
+    tc_no: str = Field(..., min_length=11, max_length=11)
+    full_name: str = Field(..., min_length=2, max_length=100)
+    phone: str = Field(..., min_length=11, max_length=11)
+    password: str = Field(..., min_length=6, max_length=100)
 
-    @field_validator('tc_no')
+    @field_validator("tc_no")
     @classmethod
     def validate_tc_no(cls, v: str) -> str:
         if not v.isdigit():
             raise ValueError("T.C. Kimlik Numarası yalnızca rakamlardan oluşmalıdır.")
-        if v[0] == '0':
+        if v[0] == "0":
             raise ValueError("T.C. Kimlik Numarası 0 ile başlayamaz.")
         return v
 
-    @field_validator('phone')
+    @field_validator("phone")
     @classmethod
     def validate_phone(cls, v: str) -> str:
         if not v.isdigit():
             raise ValueError("Telefon numarası yalnızca rakamlardan oluşmalıdır.")
         return v
 
+
 class LoginRequest(BaseModel):
-    """Giriş yapma isteği için beklenen veri yapısı"""
     tc_no: str = Field(..., min_length=11, max_length=11)
     password: str = Field(..., min_length=6)
 
+
 class ProfileUpdateRequest(BaseModel):
-    """
-    Profil güncelleme isteği için beklenen veri yapısı.
-
-    profile_picture: 'data:image/png;base64,iVBORw0KG...' formatında Base64 string.
-    Frontend, kullanıcının seçtiği görseli FileReader API ile Base64'e çevirir
-    ve bu alana koyar. None → değişiklik yok. '' → fotoğrafı sil.
-    """
     tc_no: str = Field(..., min_length=11, max_length=11)
-    occupation: str = Field("", max_length=200, description="Meslek")
-    address: str = Field("", max_length=500, description="Adres")
-    profile_picture: Optional[str] = Field(None, description="Base64 kodlu profil fotoğrafı (data:image/...)")
+    occupation: str = Field("", max_length=200)
+    address: str = Field("", max_length=500)
+    profile_picture: Optional[str] = Field(None)
 
-    @field_validator('profile_picture')
+    @field_validator("profile_picture")
     @classmethod
     def validate_profile_picture(cls, v):
-        if v is None or v == '':
+        if v is None or v == "":
             return v
-        # Base64 görsel formatı doğrulaması: 'data:image/...;base64,...' ile başlamalı
-        if not v.startswith('data:image/'):
+        if not v.startswith("data:image/"):
             raise ValueError("Profil fotoğrafı 'data:image/...' formatında olmalıdır.")
-        # Boyut kontrolü (yaklaşık ~2MB Base64 ≈ 1.5MB ham görsel)
-        # Aşırı büyük fotoğraflar veritabanını ve isteği şişirir
         if len(v) > 2_800_000:
             raise ValueError("Profil fotoğrafı 2 MB'tan büyük olamaz.")
         return v
 
+
 class AnalyzeRequest(BaseModel):
     """
-    Risk analizi isteği için beklenen veri yapısı.
-    
-    income: Aylık gelir (TL)
-    debt: Toplam borç (TL)
-    loan_amount: Talep edilen kredi tutarı (TL)
-    
-    gt (greater than) 0: Tüm değerlerin 0'dan büyük olması zorunlu.
+    Risk analizi için gerekli finansal veriler.
+
+    Ana 3 alan (income/debt/loan_amount) zorunlu;
+    geri kalan demografik bilgiler opsiyoneldir — sağlanmazsa makul varsayılanlar
+    atanır (sektör ortalamaları).
     """
-    income: float = Field(..., gt=0, description="Aylık gelir (TL)")
-    debt: float = Field(..., ge=0, description="Toplam borç (TL)")
+    income: float = Field(..., gt=0, description="Aylık net gelir (TL)")
+    debt: float = Field(..., ge=0, description="Toplam mevcut borç (TL)")
     loan_amount: float = Field(..., gt=0, description="Talep edilen kredi tutarı (TL)")
 
-# =============================================================================
-# FASTAPI LIFESPAN (Yaşam Döngüsü)
-# =============================================================================
-# lifespan, uygulamanın başlatılma ve kapatılma anlarında çalışacak kodları tanımlar.
-# "yield" öncesi: Uygulama başlarken çalışır (startup)
-# "yield" sonrası: Uygulama kapanırken çalışır (shutdown)
+    # Opsiyonel demografik özellikler
+    age: Optional[int] = Field(35, ge=18, le=75, description="Yaş")
+    employment_years: Optional[int] = Field(5, ge=0, le=50, description="İş tecrübesi (yıl)")
+    credit_history: Optional[int] = Field(3, ge=0, le=5, description="Kredi geçmişi puanı (0-5)")
+    dependents: Optional[int] = Field(1, ge=0, le=10, description="Bakmakla yükümlü sayısı")
+    savings_balance: Optional[float] = Field(0, ge=0, description="Birikim hesabı bakiyesi (TL)")
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """
-    FastAPI yaşam döngüsü yöneticisi.
-    
-    Başlatma sırasında:
-    1. SQLite veritabanını başlatır (tablo yoksa oluşturur)
-    2. Eğitilmiş ML modelini diskten belleğe yükler
-    
-    Kapatma sırasında:
-    - Temizlik işlemleri yapılır (şu an için gerek yok)
-    """
-    global ml_model
-    
-    print("\n" + "=" * 60)
-    print("🚀 KrediZeka API Sunucusu Başlatılıyor...")
-    print("=" * 60)
-    
-    # Veritabanını başlat
-    init_database()
-    
-    # ML Modelini yükle
-    if os.path.exists(MODEL_PATH):
-        ml_model = joblib.load(MODEL_PATH)
-        print(f"✅ ML Modeli yüklendi: {MODEL_PATH}")
-    else:
-        print(f"⚠️  UYARI: ML model dosyası bulunamadı: {MODEL_PATH}")
-        print("   Önce 'python train_model.py' komutunu çalıştırın!")
-    
-    print("\n✅ Sunucu hazır! → http://localhost:8000")
-    print("📖 API Docs  → http://localhost:8000/docs")
-    print("=" * 60 + "\n")
-    
-    yield  # Uygulama çalışırken burada bekler
-    
-    # Kapatma (shutdown) işlemleri
-    print("\n🔴 KrediZeka API Sunucusu kapatılıyor...")
 
 # =============================================================================
-# FASTAPI UYGULAMA OLUŞTURMA
+# FASTAPI UYGULAMA
 # =============================================================================
+
 app = FastAPI(
     title="KrediZeka API",
-    description="Makine Öğrenmesi destekli Finansal Risk ve Kredi Asistanı API'si",
-    version="1.0.0",
-    lifespan=lifespan
+    description="Enterprise-grade AI-powered credit risk assessment platform.",
+    version="2.0.0",
 )
 
-# =============================================================================
-# CORS AYARLARI
-# =============================================================================
-# CORS (Cross-Origin Resource Sharing), farklı kaynaklardan (port/domain) gelen
-# HTTP isteklerine izin verir. React uygulaması localhost:5173'te çalışırken,
-# API localhost:8000'de çalışır. CORS olmadan tarayıcı bu istekleri engeller.
-#
-# Geliştirme ortamında: Tüm kaynaklara izin veriyoruz (allow_origins=["*"])
-# Üretim ortamında: Sadece kendi domain'inize izin verin (aşağıya bakınız)
+# slowapi entegrasyonu
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ÜRETİM İÇİN: ["https://sizin-domain.vercel.app"]
-    allow_credentials=False,  # localStorage kullanılıyor; wildcard origin ile credentials=True geçersiz
-    allow_methods=["*"],     # Tüm HTTP metotlarına izin ver (GET, POST, PUT, DELETE)
-    allow_headers=["*"],     # Tüm HTTP başlıklarına izin ver
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# GZIP Sıkıştırma Middleware'i (Performans Optimizasyonu)
-# Sunucudan dönen büyük JSON verilerini sıkıştırarak ağ gecikmesini ve bant genişliği kullanımını azaltır.
+# Gzip
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
+
 # =============================================================================
-# API UC NOKTALARI (ENDPOINTS)
+# STARTUP / SHUTDOWN
+# =============================================================================
+
+@app.on_event("startup")
+def on_startup():
+    """Sunucu başlatıldığında DB hazırla ve ML modelini yükle."""
+    global ml_bundle
+
+    print("\n" + "=" * 60)
+    print("🚀 KrediZeka API Sunucusu Başlatılıyor (v2.0.0)")
+    print(f"   • DB         : {settings.database_url.split('@')[-1] if '@' in settings.database_url else settings.database_url}")
+    print(f"   • CORS       : {settings.cors_origin_list}")
+    print("=" * 60)
+
+    init_database()
+
+    if os.path.exists(MODEL_PATH):
+        ml_bundle = joblib.load(MODEL_PATH)
+        metrics = ml_bundle.get("metrics", {})
+        print(f"✅ ML Modeli yüklendi: {MODEL_PATH}")
+        print(f"   • Accuracy: %{metrics.get('accuracy', 0) * 100:.2f}")
+        print(f"   • ROC AUC : {metrics.get('roc_auc', 0):.4f}")
+        print(f"   • SHAP    : {'✓ explainer hazır' if ml_bundle.get('explainer') else '✗ yok'}")
+    else:
+        print(f"⚠️  UYARI: ML model dosyası yok: {MODEL_PATH}")
+        print("   Önce: python train_model.py")
+
+    print("\n✅ Sunucu hazır → http://localhost:8000")
+    print("📖 API Docs    → http://localhost:8000/docs")
+    print("=" * 60 + "\n")
+
+
+@app.on_event("shutdown")
+def on_shutdown():
+    print("\n🔴 KrediZeka API Sunucusu kapatılıyor...")
+
+
+# =============================================================================
+# ENDPOINT'LER
 # =============================================================================
 
 @app.get("/")
 async def root():
-    """
-    Kök endpoint - API'nin çalışıp çalışmadığını kontrol etmek için kullanılır.
-    """
+    """Sağlık kontrolü."""
     return {
         "message": "KrediZeka API çalışıyor",
-        "version": "1.0.0",
-        "docs": "/docs"
+        "version": "2.0.0",
+        "docs": "/docs",
+        "model_loaded": ml_bundle is not None,
     }
 
-# ─── 1) KAYIT OL (REGISTER) ─────────────────────────────────────────────────
+
+# ─── 1) KAYIT ──────────────────────────────────────────────────────────────
 @app.post("/api/register")
-async def register(req: RegisterRequest):
+@limiter.limit(settings.auth_rate_limit)
+async def register(
+    request: Request,                       # slowapi için zorunlu (key_func ile kullanılır)
+    req: RegisterRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     """
     Yeni kullanıcı kaydı oluşturur.
-    
-    İşlem Adımları:
-    1. T.C. No'nun daha önce kayıtlı olup olmadığını kontrol eder
-    2. Parolayı Bcrypt ile şifreler (hash'ler)
-    3. Kullanıcıyı veritabanına kaydeder
-    
-    Bcrypt Şifreleme Neden Önemli?
-    - Parolalar veritabanında asla düz metin olarak saklanmamalıdır
-    - Bcrypt, her şifreleme için benzersiz bir "tuz" (salt) ekler
-    - Bu sayede aynı parola bile farklı hash değerleri üretir
-    - Kaba kuvvet (brute force) saldırılarına karşı yavaşlatma mekanizması içerir
-    
-    Hata Durumları:
-    - 409: Aynı T.C. No ile daha önce kayıt yapılmışsa
+
+    Rate limit: 5/dakika (IP başına)
+    Background: Hoş geldin e-postası asenkron gönderilir.
     """
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-
-        # T.C. No benzersizlik kontrolü
-        existing = cursor.execute("SELECT id FROM users WHERE tc_no = ?", (req.tc_no,)).fetchone()
-        if existing:
-            raise HTTPException(
-                status_code=409,
-                detail="Bu T.C. Kimlik Numarası ile zaten bir hesap bulunmaktadır."
-            )
-
-        # Parolayı Bcrypt ile şifrele
-        # gensalt(): Rastgele bir tuz (salt) üretir
-        # hashpw(): Parola + tuz birleşimini hash'ler
-        # encode('utf-8'): String'i byte dizisine çevirir (bcrypt byte dizisi bekler)
-        password_hash = bcrypt.hashpw(
-            req.password.encode('utf-8'),
-            bcrypt.gensalt()
-        ).decode('utf-8')  # Byte dizisini tekrar string'e çeviriyoruz (veritabanında saklamak için)
-
-        # Kullanıcıyı veritabanına kaydet (created_at ile birlikte)
-        cursor.execute(
-            """
-            INSERT INTO users (tc_no, full_name, phone, password_hash, created_at)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (req.tc_no, req.full_name, req.phone, password_hash,
-             datetime.utcnow().isoformat())
+    existing = db.query(User).filter(User.tc_no == req.tc_no).first()
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail="Bu T.C. Kimlik Numarası ile zaten bir hesap bulunmaktadır."
         )
-        conn.commit()
-    finally:
-        conn.close()
+
+    password_hash = bcrypt.hashpw(
+        req.password.encode("utf-8"),
+        bcrypt.gensalt()
+    ).decode("utf-8")
+
+    user = User(
+        tc_no=req.tc_no,
+        full_name=req.full_name,
+        phone=req.phone,
+        password_hash=password_hash,
+    )
+    db.add(user)
+    db.commit()
+
+    # Background: kullanıcıyı bekletmeden hoş geldin e-postası
+    background_tasks.add_task(send_welcome_email, req.tc_no, req.full_name)
 
     return {
         "success": True,
         "message": f"Hoş geldiniz {req.full_name}! Hesabınız başarıyla oluşturuldu."
     }
 
-# ─── 2) GİRİŞ YAP (LOGIN) ──────────────────────────────────────────────────
-@app.post("/api/login")
-async def login(req: LoginRequest):
-    """
-    Kullanıcı girişi yapar (T.C. No ve Parola doğrulaması).
-    
-    İşlem Adımları:
-    1. T.C. No ile kullanıcıyı veritabanından bulur
-    2. Girilen parolayı veritabanındaki hash ile karşılaştırır
-    3. Başarılıysa kullanıcı bilgilerini döndürür
-    
-    bcrypt.checkpw() Nasıl Çalışır?
-    - Girilen parolayı aynı tuz (salt) ile hash'ler
-    - Oluşan hash'i veritabanındakiyle karşılaştırır
-    - Eşleşiyorsa True, eşleşmiyorsa False döndürür
-    
-    Hata Durumları:
-    - 401: T.C. No bulunamadıysa veya parola yanlışsa
-    """
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        # Kullanıcıyı T.C. No ile bul
-        user = cursor.execute("SELECT * FROM users WHERE tc_no = ?", (req.tc_no,)).fetchone()
-    finally:
-        conn.close()
 
+# ─── 2) GİRİŞ ──────────────────────────────────────────────────────────────
+@app.post("/api/login")
+@limiter.limit(settings.auth_rate_limit)
+async def login(
+    request: Request,
+    req: LoginRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    Kullanıcı girişi (T.C. No + Parola).
+
+    Rate limit: 5/dakika
+    Background: Giriş bildirimi asenkron gönderilir.
+    """
+    user = db.query(User).filter(User.tc_no == req.tc_no).first()
     if not user:
         raise HTTPException(
             status_code=401,
             detail="Bu T.C. Kimlik Numarası ile kayıtlı bir hesap bulunamadı."
         )
-    
-    # Parola doğrulaması
-    # checkpw: Girilen parolayı veritabanındaki hash ile karşılaştırır
+
     is_valid = bcrypt.checkpw(
-        req.password.encode('utf-8'),
-        user['password_hash'].encode('utf-8')
+        req.password.encode("utf-8"),
+        user.password_hash.encode("utf-8")
     )
-    
     if not is_valid:
-        raise HTTPException(
-            status_code=401,
-            detail="Parola hatalı. Lütfen tekrar deneyiniz."
-        )
-    
+        raise HTTPException(status_code=401, detail="Parola hatalı. Lütfen tekrar deneyiniz.")
+
+    # Asenkron giriş bildirimi
+    client_ip = get_remote_address(request)
+    background_tasks.add_task(send_login_notification, user.tc_no, user.full_name, client_ip)
+
     return {
         "success": True,
-        "message": f"Giriş başarılı! Hoş geldiniz {user['full_name']}.",
-        "user": {
-            "tc_no": user['tc_no'],
-            "full_name": user['full_name'],
-            "phone": user['phone'],
-            "occupation": user['occupation'] or "",
-            "address": user['address'] or "",
-            "profile_picture": (user['profile_picture'] if 'profile_picture' in user.keys() else "") or "",
-            "is_admin": bool(user['is_admin']) if 'is_admin' in user.keys() else False
-        }
+        "message": f"Giriş başarılı! Hoş geldiniz {user.full_name}.",
+        "user": user.to_dict(),
     }
 
-# ─── 3) PROFİL GETİR (GET PROFILE) ─────────────────────────────────────────
+
+# ─── 3) PROFİL GETİR ───────────────────────────────────────────────────────
 @app.get("/api/profile/{tc_no}")
-async def get_profile(tc_no: str):
-    """
-    Belirtilen T.C. No'ya ait kullanıcı profilini getirir.
-    
-    Path Parameter: tc_no → URL'de /api/profile/12345678901 şeklinde gönderilir
-    
-    Hata Durumları:
-    - 404: T.C. No ile eşleşen kullanıcı bulunamazsa
-    """
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        user = cursor.execute("SELECT * FROM users WHERE tc_no = ?", (tc_no,)).fetchone()
-    finally:
-        conn.close()
-
+async def get_profile(tc_no: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.tc_no == tc_no).first()
     if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="Kullanıcı bulunamadı."
-        )
-    
-    return {
-        "tc_no": user['tc_no'],
-        "full_name": user['full_name'],
-        "phone": user['phone'],
-        "occupation": user['occupation'] or "",
-        "address": user['address'] or "",
-        "profile_picture": (user['profile_picture'] if 'profile_picture' in user.keys() else "") or "",
-        "is_admin": bool(user['is_admin']) if 'is_admin' in user.keys() else False
-    }
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
+    return user.to_dict()
 
-# ─── 4) PROFİL GÜNCELLE (UPDATE PROFILE) ────────────────────────────────────
+
+# ─── 4) PROFİL GÜNCELLE ────────────────────────────────────────────────────
 @app.put("/api/profile")
-async def update_profile(req: ProfileUpdateRequest):
-    """
-    Kullanıcının meslek, adres ve profil fotoğrafı bilgilerini günceller.
+async def update_profile(req: ProfileUpdateRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.tc_no == req.tc_no).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
 
-    HTTP PUT Metodu: Kaynağın tamamını veya bir kısmını günceller.
-
-    Davranış (profile_picture):
-    - None gönderilirse → fotoğraf değişmez (mevcut değer korunur).
-    - '' (boş string) gönderilirse → fotoğraf silinir.
-    - 'data:image/...' formatında değer gönderilirse → güncellenir.
-
-    Hata Durumları:
-    - 404: T.C. No ile eşleşen kullanıcı bulunamazsa
-    """
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-
-        # Kullanıcının var olup olmadığını kontrol et
-        user = cursor.execute("SELECT id FROM users WHERE tc_no = ?", (req.tc_no,)).fetchone()
-        if not user:
-            raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
-
-        # Profil fotoğrafı isteğe bağlıdır:
-        #   None  → sadece meslek/adres güncellenir, fotoğraf değişmez
-        #   string → fotoğraf değişir (boş string = silme)
-        if req.profile_picture is None:
-            cursor.execute(
-                "UPDATE users SET occupation = ?, address = ? WHERE tc_no = ?",
-                (req.occupation, req.address, req.tc_no)
-            )
-        else:
-            cursor.execute(
-                "UPDATE users SET occupation = ?, address = ?, profile_picture = ? WHERE tc_no = ?",
-                (req.occupation, req.address, req.profile_picture, req.tc_no)
-            )
-        conn.commit()
-    finally:
-        conn.close()
+    user.occupation = req.occupation
+    user.address = req.address
+    if req.profile_picture is not None:
+        user.profile_picture = req.profile_picture
+    db.commit()
 
     return {
         "success": True,
-        "message": "Profil bilgileriniz başarıyla güncellendi."
+        "message": "Profil bilgileriniz başarıyla güncellendi.",
     }
 
-# ─── 5) RİSK ANALİZİ (ANALYZE) ─────────────────────────────────────────────
+
+# ─── 5) RİSK ANALİZİ (SHAP destekli) ───────────────────────────────────────
 @app.post("/api/analyze")
-async def analyze_risk(req: AnalyzeRequest):
+@limiter.limit(settings.analyze_rate_limit)
+async def analyze_risk(
+    request: Request,
+    req: AnalyzeRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    x_user_tc: Optional[str] = Header(None, alias="X-User-TC"),
+):
     """
-    Kredi risk analizi yapar ve yapay zeka destekli tavsiye döndürür.
-    
-    İşlem Adımları:
-    1. ML modeli ile onaylanma olasılığını (0-100 skor) hesaplar
-    2. Skora göre risk durumunu belirler (Düşük/Orta/Yüksek Risk veya Çok Riskli)
-    3. Kural tabanlı finansal tavsiye (ai_advice) oluşturur
-    
-    Risk Kategorileri:
-    - 75-100: ✅ Düşük Risk (Onaylanma olasılığı çok yüksek)
-    - 50-74:  ⚠️ Orta Risk (Onaylanabilir, ama dikkat gerekir)
-    - 25-49:  🔶 Yüksek Risk (Reddedilme olasılığı yüksek)
-    -  0-24:  🔴 Çok Yüksek Risk (Onaylanması çok zor)
+    Risk analizi + SHAP açıklaması.
+
+    Rate limit: 10/dakika (IP başına)
+    Background: Analiz raporu e-postası asenkron gönderilir (login'liyse).
+
+    Yanıt:
+      {
+        "score": 72,
+        "risk_status": "Orta Risk",
+        "dti": 20.0,
+        "lti": 3.3,
+        "ai_advice": "...",
+        "top_factors": [
+          { "feature": "income", "label_tr": "Aylık Gelir",
+            "label_en": "Monthly Income",
+            "impact": "positive", "shap_value": 0.42, "abs_value": 0.42 },
+          ...
+        ]
+      }
     """
-    global ml_model
-    
-    if ml_model is None:
+    global ml_bundle
+    if ml_bundle is None:
         raise HTTPException(
             status_code=503,
             detail="ML modeli yüklenmemiş. Lütfen önce 'python train_model.py' çalıştırın."
         )
-    
-    # ML modeline verilecek giriş verisini hazırla
-    # DataFrame formatında olmalı çünkü model eğitilirken DataFrame kullanıldı
-    input_data = pd.DataFrame({
-        'income': [req.income],
-        'debt': [req.debt],
-        'loan_amount': [req.loan_amount]
-    })
-    
-    # predict_proba: Her sınıf için olasılık döndürür.
-    # Optimizasyon: ML modeli CPU yoğun (CPU-bound) bir işlem olduğu için
-    # FastAPI'nin asenkron event-loop'unu bloklamaması adına thread havuzunda (run_in_threadpool) çalıştırılır.
-    def get_prediction():
-        return ml_model.predict_proba(input_data)[:, 1][0]
-        
-    approval_probability = await run_in_threadpool(get_prediction)
-    
-    # 0-100 arası skora çevir ve yuvarlayarak tam sayı yap
+
+    pipeline = ml_bundle["pipeline"]
+    explainer = ml_bundle["explainer"]
+    features: List[str] = ml_bundle["features"]
+    labels_tr = ml_bundle["labels_tr"]
+    labels_en = ml_bundle["labels_en"]
+
+    # Türetilmiş özellikleri hesapla
+    dti = round((req.debt / req.income) * 100, 2) if req.income > 0 else 999.0
+    lti = round(req.loan_amount / req.income, 2) if req.income > 0 else 999.0
+
+    # Model girdisini hazırla (FEATURE_NAMES sırasına uy)
+    input_dict = {
+        "income": req.income,
+        "debt": req.debt,
+        "loan_amount": req.loan_amount,
+        "age": req.age,
+        "employment_years": req.employment_years,
+        "credit_history": req.credit_history,
+        "dependents": req.dependents,
+        "savings_balance": req.savings_balance,
+        "dti_ratio": dti,
+        "lti_ratio": lti,
+    }
+    input_df = pd.DataFrame([{f: input_dict[f] for f in features}])
+
+    # ─── Tahmin + SHAP (CPU-bound → threadpool) ────────────────────────
+    def _predict_and_explain():
+        # 1) Olasılık tahmini
+        proba = pipeline.predict_proba(input_df)[:, 1][0]
+
+        # 2) SHAP değerleri (scaled girdi üzerinde)
+        scaler = pipeline.named_steps["scaler"]
+        scaled = scaler.transform(input_df)
+        shap_values = explainer.shap_values(scaled)
+        # shap_values: shape (1, n_features)
+        return float(proba), np.asarray(shap_values)[0]
+
+    approval_probability, shap_vec = await run_in_threadpool(_predict_and_explain)
     score = int(round(approval_probability * 100))
-    
-    # ─── Risk Durumu Belirleme ───────────────────────────────────────────
+
+    # ─── Risk durumu ────────────────────────────────────────────────────
     if score >= 75:
-        risk_status = "Düşük Risk"
-        risk_color = "green"    # Arayüzde yeşil renk kullanılacak
+        risk_status, risk_color = "Düşük Risk", "green"
     elif score >= 50:
-        risk_status = "Orta Risk"
-        risk_color = "yellow"   # Arayüzde sarı renk kullanılacak
+        risk_status, risk_color = "Orta Risk", "yellow"
     elif score >= 25:
-        risk_status = "Yüksek Risk"
-        risk_color = "orange"   # Arayüzde turuncu renk kullanılacak
+        risk_status, risk_color = "Yüksek Risk", "orange"
     else:
-        risk_status = "Çok Yüksek Risk"
-        risk_color = "red"      # Arayüzde kırmızı renk kullanılacak
-    
-    # ─── Finansal Oranlar ────────────────────────────────────────────────
-    # DTI (Debt-to-Income): Borç/Gelir oranı
-    # Bankalar genellikle %40'ın altını tercih eder
-    dti = round((req.debt / req.income) * 100, 1) if req.income > 0 else 999
-    
-    # LTI (Loan-to-Income): Kredi/Gelir oranı
-    lti = round(req.loan_amount / req.income, 1) if req.income > 0 else 999
-    
-    # ─── Kural Tabanlı Yapay Zeka Tavsiyesi ──────────────────────────────
-    # Finansal verilere ve risk skoruna göre kişiselleştirilmiş tavsiyeler üretir
+        risk_status, risk_color = "Çok Yüksek Risk", "red"
+
+    # ─── SHAP top 3 faktör ─────────────────────────────────────────────
+    # Mutlak SHAP değerine göre sırala — en etkili 3 faktör
+    factor_list = []
+    for i, feat in enumerate(features):
+        sv = float(shap_vec[i])
+        factor_list.append({
+            "feature": feat,
+            "label_tr": labels_tr.get(feat, feat),
+            "label_en": labels_en.get(feat, feat),
+            "shap_value": round(sv, 4),
+            "abs_value": round(abs(sv), 4),
+            "impact": "positive" if sv >= 0 else "negative",
+            "input_value": float(input_dict[feat]),
+        })
+    factor_list.sort(key=lambda x: x["abs_value"], reverse=True)
+    top_factors = factor_list[:5]  # Frontend'de 3 göstersek de tam liste yararlı
+
+    # ─── Kural tabanlı AI tavsiyesi ────────────────────────────────────
     advice_parts = []
-    
-    # Genel skor değerlendirmesi
     if score >= 75:
         advice_parts.append(
             f"🎉 Tebrikler! Kredi onaylanma skorunuz {score}/100 ile oldukça güçlü. "
@@ -589,72 +514,43 @@ async def analyze_risk(req: AnalyzeRequest):
     elif score >= 50:
         advice_parts.append(
             f"⚠️ Kredi onaylanma skorunuz {score}/100 ile orta seviyede. "
-            f"Krediniz onaylanabilir, ancak faiz oranınız yüksek olabilir. "
-            f"Aşağıdaki önerileri dikkate alarak skorunuzu yükseltebilirsiniz."
+            f"Krediniz onaylanabilir, ancak faiz oranınız yüksek olabilir."
         )
     elif score >= 25:
         advice_parts.append(
             f"🔶 Kredi onaylanma skorunuz {score}/100 ile düşük seviyede. "
-            f"Mevcut finansal durumunuzda kredi başvurusunun reddedilme olasılığı yüksektir. "
-            f"Başvuru öncesinde aşağıdaki adımları uygulamanızı öneririz."
+            f"Mevcut finansal durumunuzda kredi başvurusunun reddedilme olasılığı yüksektir."
         )
     else:
         advice_parts.append(
             f"🔴 Kredi onaylanma skorunuz {score}/100 ile kritik seviyededir. "
-            f"Mevcut koşullarla kredi almanız oldukça güçtür. "
-            f"Finansal yapınızda ciddi iyileştirmeler yapmanız gerekmektedir."
+            f"Mevcut koşullarla kredi almanız oldukça güçtür."
         )
-    
-    # Borç/Gelir oranı değerlendirmesi
+
     if dti > 50:
-        advice_parts.append(
-            f"📊 Borç/Gelir oranınız %{dti} ile kritik seviyededir (ideal: <%40). "
-            f"Mevcut borçlarınızı en az %{int(dti - 35)} oranında azaltmanız, "
-            f"kredi onay şansınızı önemli ölçüde artıracaktır. "
-            f"Yüksek faizli borçları öncelikli olarak kapatmanız önerilir."
-        )
+        advice_parts.append(f"📊 Borç/Gelir oranınız %{dti} ile kritik seviyededir (ideal: <%40).")
     elif dti > 35:
-        advice_parts.append(
-            f"📊 Borç/Gelir oranınız %{dti} seviyesindedir. Bu oran kabul edilebilir "
-            f"olmakla birlikte, %35'in altına düşürmeniz durumunda daha uygun faiz "
-            f"oranları ve daha yüksek kredi limitleri elde edebilirsiniz."
-        )
+        advice_parts.append(f"📊 Borç/Gelir oranınız %{dti} seviyesindedir. %35'in altı önerilir.")
     else:
-        advice_parts.append(
-            f"✅ Borç/Gelir oranınız %{dti} ile sağlıklı bir seviyededir. "
-            f"Bu oran, kredi kuruluşlarının aradığı ideal aralıktadır."
-        )
-    
-    # Kredi/Gelir oranı değerlendirmesi
+        advice_parts.append(f"✅ Borç/Gelir oranınız %{dti} ile sağlıklı bir seviyededir.")
+
     if lti > 12:
-        advice_parts.append(
-            f"💰 Talep ettiğiniz kredi tutarı, aylık gelirinizin {lti} katıdır. "
-            f"Bu çok yüksek bir orandır. Kredi tutarını {int(req.income * 8):,.0f}₺ "
-            f"civarına düşürmeniz, onaylanma olasılığınızı artıracaktır."
-        )
+        advice_parts.append(f"💰 Talep ettiğiniz kredi gelirinizin {lti} katıdır — çok yüksek.")
     elif lti > 6:
-        advice_parts.append(
-            f"💰 Talep ettiğiniz kredi tutarı, aylık gelirinizin {lti} katıdır. "
-            f"Bu oran kabul edilebilir düzeydedir, ancak daha düşük bir tutar "
-            f"talep etmeniz halinde daha avantajlı koşullar elde edebilirsiniz."
-        )
+        advice_parts.append(f"💰 Talep ettiğiniz kredi gelirinizin {lti} katıdır — kabul edilebilir.")
     else:
-        advice_parts.append(
-            f"✅ Talep ettiğiniz kredi tutarı, aylık gelirinizin {lti} katı olup "
-            f"oldukça makul bir seviyededir."
-        )
-    
-    # Gelir bazlı tavsiye
-    if req.income < 8000:
-        advice_parts.append(
-            "💡 Gelirinizi artırmak için ek gelir kaynakları (freelance, yatırım geliri) "
-            "oluşturmanız veya maaş artışı talep etmeniz, uzun vadede kredi "
-            "kapasitesinizi önemli ölçüde yükseltecektir."
-        )
-    
-    # Tavsiye metnini birleştir (her maddeyi yeni satırla ayır)
+        advice_parts.append(f"✅ Talep ettiğiniz kredi gelirinizin {lti} katı — makul.")
+
     ai_advice = "\n\n".join(advice_parts)
-    
+
+    # ─── Background: kullanıcı login'liyse analiz raporu mail simülasyonu ──
+    if x_user_tc:
+        user = db.query(User).filter(User.tc_no == x_user_tc).first()
+        if user:
+            background_tasks.add_task(
+                send_analysis_report_email, user.tc_no, user.full_name, score
+            )
+
     return {
         "score": score,
         "risk_status": risk_status,
@@ -662,117 +558,80 @@ async def analyze_risk(req: AnalyzeRequest):
         "dti": dti,
         "lti": lti,
         "ai_advice": ai_advice,
+        "top_factors": top_factors,                # ← SHAP açıklamaları
         "input_summary": {
             "income": req.income,
             "debt": req.debt,
-            "loan_amount": req.loan_amount
-        }
+            "loan_amount": req.loan_amount,
+        },
+        "model_meta": {
+            "version": "2.0",
+            "algorithm": "XGBoost",
+            "explainability": "SHAP TreeExplainer",
+        },
     }
 
-# =============================================================================
-# ADMIN GUARD (ROLE-BASED ACCESS CONTROL)
-# =============================================================================
-# Sadece admin yetkili kullanıcıların erişebildiği endpoint'ler için
-# kimlik doğrulama yardımcı fonksiyonu. Header üzerinden gelen X-User-TC
-# değerini DB'den kontrol eder; is_admin = 1 değilse 403 döndürür.
-#
-# NOT: Bu yaklaşım demo amaçlıdır. Production ortamında JWT ya da OAuth
-# tabanlı bir token sistemi kullanılmalıdır.
-
-def require_admin(x_user_tc: Optional[str] = Header(None, alias="X-User-TC")) -> dict:
-    """
-    Admin yetkisi gerektiren endpoint'lerde dependency olarak kullanılır.
-
-    Header: X-User-TC: <kullanıcı tc_no>
-    Davranış:
-      - Header yoksa → 401 Unauthorized
-      - Kullanıcı bulunamazsa → 401 Unauthorized
-      - is_admin = 0 ise → 403 Forbidden
-      - is_admin = 1 ise → kullanıcı objesini döndürür
-    """
-    if not x_user_tc:
-        raise HTTPException(status_code=401, detail="Yetkilendirme bilgisi eksik (X-User-TC).")
-
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        user = cursor.execute(
-            "SELECT tc_no, full_name, is_admin FROM users WHERE tc_no = ?",
-            (x_user_tc,)
-        ).fetchone()
-    finally:
-        conn.close()
-
-    if not user:
-        raise HTTPException(status_code=401, detail="Kullanıcı bulunamadı.")
-    if not user['is_admin']:
-        raise HTTPException(status_code=403, detail="Bu işlem için yönetici yetkisi gerekiyor.")
-
-    return {"tc_no": user['tc_no'], "full_name": user['full_name'], "is_admin": True}
 
 # =============================================================================
 # ADMIN ENDPOINT'LERİ
 # =============================================================================
-from fastapi import Depends
 
-# ─── 6) ADMIN İSTATİSTİKLERİ ───────────────────────────────────────────────
+def require_admin(
+    x_user_tc: Optional[str] = Header(None, alias="X-User-TC"),
+    db: Session = Depends(get_db),
+) -> dict:
+    """X-User-TC header'ı ile admin doğrulaması (RBAC)."""
+    if not x_user_tc:
+        raise HTTPException(status_code=401, detail="Yetkilendirme bilgisi eksik (X-User-TC).")
+
+    user = db.query(User).filter(User.tc_no == x_user_tc).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Kullanıcı bulunamadı.")
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Bu işlem için yönetici yetkisi gerekiyor.")
+
+    return {"tc_no": user.tc_no, "full_name": user.full_name, "is_admin": True}
+
+
 @app.get("/api/admin/stats")
-async def admin_stats(admin: dict = Depends(require_admin)):
-    """
-    Admin paneli için özet istatistikleri toplar ve döndürür.
-    require_admin dependency'si ile yetki kontrolü otomatik yapılır.
-    """
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
+async def admin_stats(
+    admin: dict = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Yönetici paneli için sistem istatistikleri."""
+    total_users = db.query(User).count()
+    total_admins = db.query(User).filter(User.is_admin.is_(True)).count()
+    regular_users = total_users - total_admins
 
-        # Temel sayımlar
-        total_users = cursor.execute("SELECT COUNT(*) AS c FROM users").fetchone()['c']
-        total_admins = cursor.execute("SELECT COUNT(*) AS c FROM users WHERE is_admin = 1").fetchone()['c']
-        regular_users = total_users - total_admins
+    users_with_picture = db.query(User).filter(
+        User.profile_picture != ""
+    ).count()
+    users_with_complete = db.query(User).filter(
+        User.occupation != "", User.address != ""
+    ).count()
 
-        # Profil zenginliği
-        users_with_picture = cursor.execute(
-            "SELECT COUNT(*) AS c FROM users WHERE profile_picture IS NOT NULL AND profile_picture != ''"
-        ).fetchone()['c']
-        users_with_complete = cursor.execute(
-            "SELECT COUNT(*) AS c FROM users WHERE occupation != '' AND address != ''"
-        ).fetchone()['c']
+    now = datetime.utcnow()
+    all_users = db.query(User).order_by(User.id.desc()).all()
+    last_24h = sum(
+        1 for u in all_users
+        if u.created_at and (now - u.created_at).total_seconds() <= 86400
+    )
+    last_7d = sum(
+        1 for u in all_users
+        if u.created_at and (now - u.created_at).total_seconds() <= 604800
+    )
 
-        # Son zaman dilimlerinde kayıt sayıları (created_at boş olmayanlar üzerinden)
-        now = datetime.utcnow()
-        all_users = cursor.execute(
-            "SELECT tc_no, full_name, created_at, is_admin FROM users ORDER BY id DESC"
-        ).fetchall()
-
-        last_24h = 0
-        last_7d = 0
-        for u in all_users:
-            if not u['created_at']:
-                continue
-            try:
-                created = datetime.fromisoformat(u['created_at'])
-                delta = (now - created).total_seconds()
-                if delta <= 86400:           # 24 saat
-                    last_24h += 1
-                if delta <= 604800:          # 7 gün
-                    last_7d += 1
-            except ValueError:
-                continue
-
-        # Son 5 kullanıcı (TC No maskelenmiş güvenlik için)
-        recent_users = []
-        for u in all_users[:5]:
-            tc = u['tc_no']
-            masked_tc = (tc[:3] + '*****' + tc[-3:]) if len(tc) >= 11 else tc
-            recent_users.append({
-                "tc_no_masked": masked_tc,
-                "full_name": u['full_name'],
-                "created_at": u['created_at'],
-                "is_admin": bool(u['is_admin']),
-            })
-    finally:
-        conn.close()
+    # Son 5 kayıt (TC No maskeli)
+    recent_users = []
+    for u in all_users[:5]:
+        tc = u.tc_no
+        masked = (tc[:3] + "*****" + tc[-3:]) if len(tc) >= 11 else tc
+        recent_users.append({
+            "tc_no_masked": masked,
+            "full_name": u.full_name,
+            "created_at": u.created_at.isoformat() if u.created_at else None,
+            "is_admin": bool(u.is_admin),
+        })
 
     return {
         "total_users": total_users,
@@ -786,11 +645,10 @@ async def admin_stats(admin: dict = Depends(require_admin)):
         "generated_at": datetime.utcnow().isoformat(),
     }
 
+
 # =============================================================================
-# UYGULAMA ÇALIŞTIRMA
+# Üretim için uvicorn entry point
 # =============================================================================
-# Bu dosya doğrudan çalıştırıldığında uvicorn sunucusunu başlatır.
-# --reload: Kod değişikliklerinde otomatik yeniden başlatma (geliştirme modu)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

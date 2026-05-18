@@ -4,6 +4,9 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  // Class tabanlı dark mode: <html class="dark"> ile aktifleşir
+  // ThemeContext bu sınıfı root element'e ekler/çıkarır
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {

@@ -17,6 +17,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import {
   Shield,
   User,
@@ -29,7 +30,9 @@ import {
   Building2,
   Package,
   Globe,
-  LayoutDashboard
+  LayoutDashboard,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -38,6 +41,8 @@ export default function Navbar() {
   const location = useLocation();
   // i18n hook'u: t() çeviri fonksiyonu, i18n nesnesi dil değiştirme için
   const { t, i18n } = useTranslation();
+  // Tema hook'u: dark/light arası geçiş için
+  const { theme, toggleTheme } = useTheme();
 
   // Sayfa scroll durumu (navbar arka plan değişimi için)
   const [scrolled, setScrolled] = useState(false);
@@ -101,7 +106,7 @@ export default function Navbar() {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
         scrolled
-          ? 'bg-white/95 backdrop-blur-xl shadow-lg shadow-slate-200/50 border-b border-slate-100'
+          ? 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-lg shadow-slate-200/50 dark:shadow-black/30 border-b border-slate-100 dark:border-slate-800'
           : 'bg-transparent'
       }`}
     >
@@ -118,13 +123,11 @@ export default function Navbar() {
               <Shield className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className={`text-xl font-extrabold tracking-tight transition-colors duration-300 ${
-                scrolled ? 'text-slate-900' : 'text-slate-900'
-              }`}>
+              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 transition-colors duration-300">
                 Kredi<span className="gradient-text">Zeka</span>
               </h1>
               <p className={`text-[10px] font-medium tracking-widest uppercase transition-colors duration-300 ${
-                scrolled ? 'text-slate-400' : 'text-slate-500'
+                scrolled ? 'text-slate-400 dark:text-slate-500' : 'text-slate-500 dark:text-slate-400'
               }`}>
                 {t('navbar.brand_tagline')}
               </p>
@@ -139,8 +142,8 @@ export default function Navbar() {
                 to={path}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
                   isActive(path)
-                    ? 'bg-primary-50 text-primary-700 shadow-sm'
-                    : 'text-slate-600 hover:text-primary-600 hover:bg-slate-50'
+                    ? 'bg-primary-50 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -154,8 +157,8 @@ export default function Navbar() {
                 to="/admin"
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
                   isActive('/admin')
-                    ? 'bg-amber-100 text-amber-700 shadow-sm'
-                    : 'text-amber-600 hover:bg-amber-50'
+                    ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 shadow-sm'
+                    : 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30'
                 }`}
               >
                 <LayoutDashboard className="w-4 h-4" />
@@ -164,15 +167,25 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* ─── Sağ Taraf: Dil + Oturum Butonları ─── */}
+          {/* ─── Sağ Taraf: Tema + Dil + Oturum Butonları ─── */}
           <div className="hidden lg:flex items-center gap-2">
+
+            {/* Tema Değiştirici (Sun/Moon) — Dark mode toggle */}
+            <button
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+              aria-label={`Theme: ${theme === 'dark' ? 'light' : 'dark'}`}
+              className="flex items-center justify-center w-10 h-10 rounded-xl text-slate-600 dark:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary-600 transition-all duration-300"
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
 
             {/* Dil Değiştirici (TR/EN) */}
             <button
               onClick={toggleLanguage}
               title={t('navbar.language')}
               aria-label={`${t('navbar.language')}: ${nextLangCode}`}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-primary-600 transition-all duration-300"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-primary-600 transition-all duration-300"
             >
               <Globe className="w-4 h-4" />
               <span>{currentLangCode}</span>
@@ -185,8 +198,8 @@ export default function Navbar() {
                   to="/profil"
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
                     isActive('/profil')
-                      ? 'bg-primary-100 text-primary-700'
-                      : 'text-slate-700 hover:bg-slate-100'
+                      ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300'
+                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center overflow-hidden">
@@ -206,7 +219,7 @@ export default function Navbar() {
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-300"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all duration-300"
                 >
                   <LogOut className="w-4 h-4" />
                   {t('navbar.logout')}
@@ -217,7 +230,7 @@ export default function Navbar() {
                 {/* Oturum kapalıysa: Giriş ve Kayıt butonları */}
                 <Link
                   to="/giris"
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-all duration-300"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-300"
                 >
                   <LogIn className="w-4 h-4" />
                   {t('navbar.login')}
@@ -233,20 +246,28 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* ─── Mobil Sağ Köşe: Dil + Hamburger ─── */}
+          {/* ─── Mobil Sağ Köşe: Tema + Dil + Hamburger ─── */}
           <div className="lg:hidden flex items-center gap-1">
-            {/* Mobilde de dil değiştirici görünür */}
+            {/* Mobilde tema değiştirici */}
+            <button
+              onClick={toggleTheme}
+              aria-label={`Theme: ${theme === 'dark' ? 'light' : 'dark'}`}
+              className="flex items-center justify-center w-9 h-9 rounded-xl text-slate-600 dark:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-300"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            {/* Mobilde dil değiştirici */}
             <button
               onClick={toggleLanguage}
               aria-label={`${t('navbar.language')}: ${nextLangCode}`}
-              className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all duration-300"
+              className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-300"
             >
               <Globe className="w-4 h-4" />
               <span>{currentLangCode}</span>
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2.5 rounded-xl text-slate-600 hover:bg-slate-100 transition-all duration-300"
+              className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-300"
               aria-label="Menü"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -261,15 +282,15 @@ export default function Navbar() {
           mobileMenuOpen ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="bg-white/95 backdrop-blur-xl border-t border-slate-100 shadow-xl px-4 py-4 space-y-1">
+        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-100 dark:border-slate-800 shadow-xl px-4 py-4 space-y-1">
           {navLinks.map(({ path, label, icon: Icon }) => (
             <Link
               key={path}
               to={path}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
                 isActive(path)
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'text-slate-600 hover:bg-slate-50'
+                  ? 'bg-primary-50 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
               }`}
             >
               <Icon className="w-5 h-5" />
@@ -283,8 +304,8 @@ export default function Navbar() {
               to="/admin"
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
                 isActive('/admin')
-                  ? 'bg-amber-100 text-amber-700'
-                  : 'text-amber-600 hover:bg-amber-50'
+                  ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                  : 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30'
               }`}
             >
               <LayoutDashboard className="w-5 h-5" />
@@ -292,19 +313,19 @@ export default function Navbar() {
             </Link>
           )}
 
-          <div className="border-t border-slate-100 pt-3 mt-3 space-y-1">
+          <div className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-3 space-y-1">
             {user ? (
               <>
                 <Link
                   to="/profil"
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all duration-300"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all duration-300"
                 >
                   <User className="w-5 h-5" />
                   {t('navbar.profile')}
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-300 w-full text-left"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all duration-300 w-full text-left"
                 >
                   <LogOut className="w-5 h-5" />
                   {t('navbar.logout')}
@@ -314,7 +335,7 @@ export default function Navbar() {
               <>
                 <Link
                   to="/giris"
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all duration-300"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all duration-300"
                 >
                   <LogIn className="w-5 h-5" />
                   {t('navbar.login')}

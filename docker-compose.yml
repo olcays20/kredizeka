@@ -1,0 +1,97 @@
+# =============================================================================
+# KrediZeka - Docker Compose Yapılandırması
+# =============================================================================
+# Bu dosya tüm sistemi tek komutla ayağa kaldırır:
+#   docker compose up --build
+#
+# Servisler:
+#   1. db        → PostgreSQL 15 (kalıcı veri için named volume)
+#   2. backend   → FastAPI + Uvicorn (8000 portu)
+#   3. frontend  → Vite ile build edilmiş React, Nginx ile sunulur (80 portu)
+#
+# Network: Tüm servisler 'kredizeka-net' köprü ağı üzerinden konuşur.
+# =============================================================================
+
+services:
+
+  # ───────── PostgreSQL Veritabanı ─────────
+  db:
+    image: postgres:15-alpine
+    container_name: kredizeka-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kredizeka}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kredizeka_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-kredizeka_db}
+    volumes:
+      # Veriyi kalıcı tutar — container silinse bile veritabanı korunur
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Sadece host makineden erişim (geliştirme amaçlı)
+      - "5432:5432"
+    healthcheck:
+      # Backend, db hazır olmadan başlamasın
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kredizeka} -d ${POSTGRES_DB:-kredizeka_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - kredizeka-net
+
+  # ───────── Backend (FastAPI) ─────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kredizeka-backend
+    restart: unless-stopped
+    environment:
+      # DATABASE_URL → SQLAlchemy bu URL ile bağlanır
+      # Format: postgresql+psycopg2://user:pass@host:port/dbname
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-kredizeka}:${POSTGRES_PASSWORD:-kredizeka_pass}@db:5432/${POSTGRES_DB:-kredizeka_db}
+      # CORS için ön yüz adresi (üretimde domain'inizle değiştirin)
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      # Varsayılan admin bilgileri (init_database'de oluşturulur)
+      DEFAULT_ADMIN_TC: ${DEFAULT_ADMIN_TC:-11111111111}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-admin123}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      # ML model dosyasını host'a yansıtmak istersek (opsiyonel):
+      - ./backend/loan_risk_pipeline.pkl:/app/loan_risk_pipeline.pkl
+    networks:
+      - kredizeka-net
+
+  # ───────── Frontend (React + Vite + Nginx) ─────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Build zamanı: VITE_API_URL Vite'a aktarılır
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    container_name: kredizeka-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - kredizeka-net
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Kalıcı Volume (Veritabanı verisi container silinince kaybolmasın)
+# ─────────────────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+
+# ─────────────────────────────────────────────────────────────────────────────
+# İzole Network (Servisler hostname ile konuşabilsin: db, backend, frontend)
+# ─────────────────────────────────────────────────────────────────────────────
+networks:
+  kredizeka-net:
+    driver: bridge

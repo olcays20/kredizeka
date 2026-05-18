@@ -26,10 +26,18 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  /* Smooth tema geçişi: light/dark arasında 250ms */
+  transition: background-color 250ms ease, color 250ms ease;
+}
+
+/* Dark mode body */
+html.dark body {
+  background-color: #0f172a;   /* slate-900 */
+  color: #e2e8f0;              /* slate-200 */
 }
 
 /* ==========================================
-   Scrollbar Stili
+   Scrollbar Stili (Light + Dark)
    ========================================== */
 ::-webkit-scrollbar {
   width: 8px;
@@ -45,6 +53,18 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
 
@@ -185,27 +205,29 @@ body {
 }
 
 /* ==========================================
-   Form Input Stili
+   Form Input Stili (Light + Dark)
    ========================================== */
 .input-field {
-  @apply w-full px-4 py-3.5 bg-white border-2 border-slate-200 rounded-xl
-         text-slate-800 font-medium placeholder:text-slate-400 placeholder:font-normal
+  @apply w-full px-4 py-3.5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl
+         text-slate-800 dark:text-slate-100 font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500 placeholder:font-normal
          transition-all duration-300
-         focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10
-         hover:border-slate-300;
+         focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 focus:ring-4 focus:ring-primary-500/10
+         hover:border-slate-300 dark:hover:border-slate-600;
 }
 
 /* ==========================================
-   Kart Stili
+   Kart Stili (Light + Dark)
    ========================================== */
 .card {
-  @apply bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100
+  @apply bg-white dark:bg-slate-800 rounded-2xl shadow-lg shadow-slate-200/50 dark:shadow-black/30
+         border border-slate-100 dark:border-slate-700
          transition-all duration-300
-         hover:shadow-xl hover:shadow-slate-200/80 hover:-translate-y-1;
+         hover:shadow-xl hover:shadow-slate-200/80 dark:hover:shadow-black/50 hover:-translate-y-1;
 }
 
 .card-static {
-  @apply bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100;
+  @apply bg-white dark:bg-slate-800 rounded-2xl shadow-lg shadow-slate-200/50 dark:shadow-black/30
+         border border-slate-100 dark:border-slate-700;
 }
 
 /* ==========================================

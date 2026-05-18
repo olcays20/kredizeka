@@ -18,6 +18,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { useAuth } from './hooks/useAuth';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -80,15 +81,16 @@ const PageLoader = () => (
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <ScrollToTop />
-        <Toaster position="top-right" />
-        <div className="flex flex-col min-h-screen">
-          <Navbar />
-          <main className="flex-1">
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <ScrollToTop />
+          <Toaster position="top-right" />
+          <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+            <Navbar />
+            <main className="flex-1">
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
                 <Route path="/" element={<RiskReportPage />} />
                 <Route path="/kayit" element={<RegisterPage />} />
                 <Route path="/giris" element={<LoginPage />} />
@@ -112,13 +114,14 @@ function App() {
                     <AdminPage />
                   </AdminRoute>
                 } />
-              </Routes>
-            </Suspense>
-          </main>
-          <Footer />
-        </div>
-      </Router>
-    </AuthProvider>
+                </Routes>
+              </Suspense>
+            </main>
+            <Footer />
+          </div>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

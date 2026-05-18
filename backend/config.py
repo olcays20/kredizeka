@@ -48,10 +48,14 @@ class Settings(BaseSettings):
     analyze_rate_limit: str = "10/minute"
 
     # Pydantic Settings yapılandırması
+    # protected_namespaces: Pydantic v2'de "model_" prefix'li alan isimleri
+    # uyarı verir (BaseModel API ile çakışma riski). Bizim 'model_path' alanımız
+    # zararsız, bu yüzden korumalı namespace listesini sadece 'settings_' yapıyoruz.
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        extra="ignore",  # Tanımlı olmayan env'leri yoksay
+        extra="ignore",
+        protected_namespaces=('settings_',),
     )
 
     @property

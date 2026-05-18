@@ -27,7 +27,7 @@
 
 ---
 
-### 5.1. Proje Özeti
+### Proje Özeti
 
 **KrediZeka**, bireylerin kredi başvurusu yapmadan önce kendi finansal risklerini ölçmelerini sağlayan, yapay zekâ destekli modern bir web uygulamasıdır.
 
@@ -65,7 +65,7 @@ Geleneksel kredi değerlendirme süreçleri opak ve kullanıcıya kapalıdır. K
 
 ---
 
-### 5.2. Kullanılan AI Araçları
+### Kullanılan AI Araçları
 
 Bu projeyi geliştirirken, üretkenliği artırmak amacıyla aşağıdaki yapay zekâ araçlarından yararlandım. Tasarım kararları, mimari seçimler, problem tanımı ve uygulama testleri tamamen kendi sorumluluğumdadır; AI araçları yardımcı bir hızlandırıcı olarak konumlandırılmıştır.
 
@@ -84,7 +84,7 @@ Bu projeyi geliştirirken, üretkenliği artırmak amacıyla aşağıdaki yapay 
 
 ---
 
-### 5.3. Prompt Kütüphanesi
+### Prompt Kütüphanesi
 
 Geliştirme sürecinde en verimli sonuçları aldığım prompt örneklerinden seçkiler:
 
@@ -165,7 +165,7 @@ terminoloji kullan. Hem TR hem EN versiyonları üret.
 
 ---
 
-### 5.4. Kurulum ve Çalıştırma
+### Kurulum ve Çalıştırma
 
 #### Yöntem 1: Docker Compose (Önerilen)
 
@@ -301,7 +301,7 @@ curl -X POST http://localhost:8000/api/analyze \
 
 ---
 
-### 5.5. Gelecek Vizyonu
+### Gelecek Vizyonu
 
 #### Geliştirilebilecek AI Özellikleri
 
@@ -351,7 +351,7 @@ S3 (PDF arşivi, model artifact'ları) + CloudWatch (loglar, metrikler)
 
 ---
 
-### 5.1. Project Overview
+### Project Overview
 
 **KrediZeka** is a modern, AI-powered web application that helps individuals assess their own credit risk before applying for a loan.
 
@@ -389,7 +389,7 @@ Traditional credit evaluation processes are opaque and inaccessible to end users
 
 ---
 
-### 5.2. AI Tools Used
+### AI Tools Used
 
 While building this project, I leveraged the following AI tools to boost productivity. Design decisions, architectural choices, problem definition, and testing remain entirely my own responsibility; AI tools served as helpful accelerators.
 
@@ -408,7 +408,7 @@ While building this project, I leveraged the following AI tools to boost product
 
 ---
 
-### 5.3. Prompt Library
+### Prompt Library
 
 A selection of the prompts that produced the most useful results during development:
 
@@ -488,7 +488,7 @@ realistic legal terminology. Produce both TR and EN versions.
 
 ---
 
-### 5.4. Installation & Running
+### Installation & Running
 
 #### Method 1: Docker Compose (Recommended)
 
@@ -604,7 +604,7 @@ curl -X POST http://localhost:8000/api/analyze \
 
 ---
 
-### 5.5. Future Vision
+### Future Vision
 
 #### Possible AI Enhancements
 

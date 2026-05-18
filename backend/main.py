@@ -239,7 +239,12 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 @app.on_event("startup")
 def on_startup():
-    """Sunucu başlatıldığında DB hazırla ve ML modelini yükle."""
+    """
+    Sunucu başlatıldığında DB hazırla ve ML modelini yükle.
+
+    Tüm adımlar try/except ile sarılı — herhangi biri çökerse uvicorn
+    yine de yukarı kalkar ve sağlık endpoint'leri yanıt verir.
+    """
     global ml_bundle
 
     print("\n" + "=" * 60)
@@ -248,29 +253,39 @@ def on_startup():
     print(f"   • CORS       : {settings.cors_origin_list}")
     print("=" * 60)
 
-    init_database()
+    # 1) Veritabanı şeması
+    try:
+        init_database()
+    except Exception as e:
+        print(f"❌ Veritabanı başlatma hatası: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
 
-    # ─── ML Modelini Yükle (yoksa otomatik eğit) ────────────────────
-    # Render gibi ephemeral disk'lerde model dosyası yeni deploy'da kaybolur,
-    # bu yüzden startup'ta yoksa otomatik eğitiriz (~1-2 dakika sürer).
-    if not os.path.exists(MODEL_PATH):
-        print(f"⚠️  Model bulunamadı, eğitim başlatılıyor: {MODEL_PATH}")
-        try:
-            from train_model import main as train_main
-            train_main()
-        except Exception as e:
-            print(f"❌ Model eğitim hatası: {e}")
-            print("   /api/analyze endpoint'i 503 dönecek; diğer endpoint'ler çalışır.")
-
-    if os.path.exists(MODEL_PATH):
-        ml_bundle = joblib.load(MODEL_PATH)
-        metrics = ml_bundle.get("metrics", {})
-        print(f"✅ ML Modeli yüklendi: {MODEL_PATH}")
-        print(f"   • Accuracy: %{metrics.get('accuracy', 0) * 100:.2f}")
-        print(f"   • ROC AUC : {metrics.get('roc_auc', 0):.4f}")
-        print(f"   • SHAP    : {'✓ explainer hazır' if ml_bundle.get('explainer') else '✗ yok'}")
-    else:
-        print(f"⚠️  UYARI: ML modeli henüz yüklenemedi.")
+    # 2) ML modeli yükle (varsa) — Render gibi düşük bellekli ortamda
+    #    startup'ta eğitim yapmıyoruz, dosya yoksa /api/analyze 503 döner
+    try:
+        if os.path.exists(MODEL_PATH):
+            loaded = joblib.load(MODEL_PATH)
+            # Eski format kontrolü: v1 modelinde {"model": ...} vardı,
+            # v2'de {"pipeline": ..., "explainer": ...}. Uyumsuzsa atla.
+            if isinstance(loaded, dict) and "pipeline" in loaded and "explainer" in loaded:
+                ml_bundle = loaded
+                metrics = ml_bundle.get("metrics", {})
+                print(f"✅ ML Modeli yüklendi (v2 - XGBoost+SHAP): {MODEL_PATH}")
+                print(f"   • Accuracy: %{metrics.get('accuracy', 0) * 100:.2f}")
+                print(f"   • ROC AUC : {metrics.get('roc_auc', 0):.4f}")
+            else:
+                print(f"⚠️  Model dosyası eski formatta (v1). v2 (XGBoost+SHAP) gerekli.")
+                print(f"   Çözüm: 'python train_model.py' ile yeniden eğitip git'e ekleyin.")
+                ml_bundle = None
+        else:
+            print(f"⚠️  Model dosyası yok: {MODEL_PATH}")
+            print("   Çözüm: 'python train_model.py' ile eğitip git'e ekleyin")
+            print("   /api/analyze 503 dönecek; diğer endpoint'ler çalışır.")
+    except Exception as e:
+        print(f"❌ Model yükleme hatası: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
 
     print("\n✅ Sunucu hazır → http://localhost:8000")
     print("📖 API Docs    → http://localhost:8000/docs")

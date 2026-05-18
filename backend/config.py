@@ -26,7 +26,8 @@ class Settings(BaseSettings):
     # ─── Veritabanı ──────────────────────────────────────────────────
     # SQLite fallback (Docker dışında çalıştırırken kolay test için)
     # Üretimde: postgresql+psycopg2://user:pass@host:5432/dbname
-    database_url: str = "sqlite:///./kredizeka.db"
+    # Not: /tmp altında yazılabilir disk her PaaS'da garantilidir (Render dahil)
+    database_url: str = "sqlite:////tmp/kredizeka.db"
 
     # ─── CORS ────────────────────────────────────────────────────────
     # Virgülle ayrılmış origin listesi ("*" = hepsi)

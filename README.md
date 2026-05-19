@@ -10,14 +10,54 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgresql.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![XGBoost](https://img.shields.io/badge/XGBoost-2.1-FF6F00?style=for-the-badge)](https://xgboost.ai)
-[![SHAP](https://img.shields.io/badge/SHAP-0.46-E91E63?style=for-the-badge)](https://shap.readthedocs.io)
+[![XGBoost](https://img.shields.io/badge/XGBoost-2.0-FF6F00?style=for-the-badge)](https://xgboost.ai)
+[![SHAP](https://img.shields.io/badge/SHAP-0.45-E91E63?style=for-the-badge)](https://shap.readthedocs.io)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+
+<br />
+
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-kredizeka.vercel.app-000000?style=for-the-badge)](https://kredizeka.vercel.app)
+[![API](https://img.shields.io/badge/⚙️_API-Render-46E3B7?style=for-the-badge)](https://kredizeka.onrender.com)
+[![ML](https://img.shields.io/badge/🧠_Model-XGBoost%20%2B%20SHAP-FF6F00?style=for-the-badge)](https://github.com/olcays20/kredizeka)
+[![Accuracy](https://img.shields.io/badge/Accuracy-98.75%25-success?style=for-the-badge)](https://github.com/olcays20/kredizeka)
 
 **🇹🇷 [Türkçe](#-türkçe) · 🇬🇧 [English](#-english)**
 
 </div>
+
+---
+
+## 🎬 Demo & Ekran Görüntüleri
+
+> **🌐 Canlı Demo:** [kredizeka.vercel.app](https://kredizeka.vercel.app)
+>
+> **👤 Test Yönetici Hesabı:** T.C. `11111111111` · Şifre `admin123`
+
+<table>
+<tr>
+<td align="center">
+  <strong>🏠 Ana Sayfa</strong><br />
+  <em>Stepper formu ile 3 adımlı risk analizi</em>
+</td>
+<td align="center">
+  <strong>🧠 SHAP Etki Grafiği</strong><br />
+  <em>Açıklanabilir yapay zekâ ile karar analizi</em>
+</td>
+</tr>
+<tr>
+<td align="center">
+  <strong>🌙 Karanlık Tema</strong><br />
+  <em>Tek tıkla aydınlık ⇄ karanlık geçiş</em>
+</td>
+<td align="center">
+  <strong>📊 Yönetici Paneli</strong><br />
+  <em>8 KPI kartı + son kullanıcılar tablosu</em>
+</td>
+</tr>
+</table>
+
+> 📸 *Ekran görüntüleri ilk live test sonrasında `docs/screenshots/` altında yayımlanacak.*
 
 ---
 

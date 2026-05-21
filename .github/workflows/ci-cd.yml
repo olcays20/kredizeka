@@ -34,11 +34,11 @@ jobs:
     steps:
       # 1) Depo kodunu CI çalıştırıcısına indir
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # 2) Python 3.11 ortamını kur (projenin hedef sürümü)
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -74,13 +74,13 @@ jobs:
     steps:
       # 1) Depo kodunu CI çalıştırıcısına indir
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # 2) Node.js 20 (LTS) ortamını kur
       #    'cache: npm' → npm bağımlılıklarını önbelleğe alır, sonraki
       #    çalıştırmalar hızlanır.
       - name: Set up Node.js 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "20"
           cache: "npm"

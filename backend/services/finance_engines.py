@@ -464,8 +464,11 @@ def compute_ticari_analysis(hizmet_turu: str, data: Dict[str, Any]) -> Dict[str,
     learner_1 = _clamp(math.log10(ciro_per_calisan + 1) / 6, 0, 1) * 2.5
 
     # 2) POS hacminin ciroya oranı (nakit akışı göstergesi)
+    # %100 üst sınır: POS hacmi mantıken yıllık ciroyu aşamaz; kullanıcı
+    # tutarsız veri girse bile oran anlamlı bir aralıkta (0-100) kalır.
     pos_orani = (pos_hacmi * 12 / ciro) if ciro > 0 else 0
-    learner_2 = _clamp(pos_orani, 0, 1) * 1.8
+    pos_orani = _clamp(pos_orani, 0, 1.0)
+    learner_2 = pos_orani * 1.8
 
     # 3) Şirket yaşı (köklülük / hayatta kalma primi)
     learner_3 = _clamp(sirket_yasi / 15, 0, 1) * 2.0

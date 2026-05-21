@@ -696,11 +696,16 @@ async def bireysel_analyze(
         raise HTTPException(status_code=400, detail=str(e))
 
     # Sonucu PostgreSQL bireysel_analytics tablosuna kaydet
+    # Risk skorlu motorlar 'score', tahmin motorları 'tahmin' döndürür;
+    # hesaplanan_skor sütununa hangisi varsa o yazılır.
+    hesaplanan = result.get("score")
+    if hesaplanan is None:
+        hesaplanan = result.get("tahmin", 0.0)
     kayit = BireyselAnalytics(
         tc_no=req.tc_no,
         hizmet_turu=req.hizmet_turu,
         girdi_verileri=req.girdi_verileri,
-        hesaplanan_skor=float(result.get("score", 0.0)),
+        hesaplanan_skor=float(hesaplanan),
         yapay_zeka_tavsiyesi=result.get("ai_advice", ""),
     )
     db.add(kayit)

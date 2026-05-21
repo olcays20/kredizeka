@@ -57,7 +57,7 @@ export const bireyselServices = [
     color: 'from-emerald-500 to-emerald-600',
     titleKey: 'services.birikim_title',
     descKey: 'services.birikim_desc',
-    resultKind: 'score',
+    resultKind: 'prediction',
     fields: [
       { name: 'anapara', labelKey: 'services.f_anapara', type: 'number', placeholder: '20000', icon: PiggyBank },
       { name: 'vade_ay', labelKey: 'services.f_vade_ay', type: 'number', placeholder: '24', icon: Calendar },
@@ -87,7 +87,7 @@ export const bireyselServices = [
     color: 'from-amber-500 to-amber-600',
     titleKey: 'services.yatirim_title',
     descKey: 'services.yatirim_desc',
-    resultKind: 'score',
+    resultKind: 'prediction',
     fields: [
       { name: 'yatirim_tutari', labelKey: 'services.f_yatirim_tutari', type: 'number', placeholder: '50000', icon: DollarSign },
       {
@@ -109,7 +109,7 @@ export const bireyselServices = [
     color: 'from-pink-500 to-pink-600',
     titleKey: 'services.bireysel_sigorta_title',
     descKey: 'services.bireysel_sigorta_desc',
-    resultKind: 'score',
+    resultKind: 'prediction',
     fields: [
       { name: 'yas', labelKey: 'services.f_yas', type: 'number', placeholder: '35', icon: Users },
       { name: 'teminat_tutari', labelKey: 'services.f_teminat_tutari', type: 'number', placeholder: '500000', icon: ShieldCheck },

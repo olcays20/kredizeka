@@ -134,14 +134,17 @@ def _engine_birikim(data: Dict[str, Any]) -> Dict[str, Any]:
     Birikim Hesabı simülasyonu — Vade ve tutara göre bileşik getiri.
 
     Girdi: anapara, vade_ay, aylik_ekleme
-    Çıktı: tahmini toplam getiri + bileşik faiz projeksiyonu
+    Çıktı: tahmini toplam getiri (prediction) + bileşik faiz projeksiyonu
+
+    Not: Birikim bir "getiri tahmini"dir, risk skoru değildir. Bu yüzden
+    çıktı 'tahmin' / 'tahmin_label' biçimindedir (resultKind: prediction).
     """
     principal = _safe_float(data.get("anapara"))
     months = int(_safe_float(data.get("vade_ay"), 12))
     monthly_add = _safe_float(data.get("aylik_ekleme"))
 
-    # Kurgusal yıllık faiz: vade uzadıkça artar (sadakat primi)
-    annual_rate = 0.32 + min(months / 60, 1) * 0.13   # %32 - %45
+    # Kurgusal yıllık faiz: vade uzadıkça hafif artar (sadakat primi)
+    annual_rate = 0.30 + min(months / 60, 1) * 0.10   # %30 - %40
     monthly_rate = annual_rate / 12
 
     # Bileşik faiz + her ay düzenli ekleme (annuity) projeksiyonu
@@ -155,10 +158,6 @@ def _engine_birikim(data: Dict[str, Any]) -> Dict[str, Any]:
     total_deposited = principal + monthly_add * months
     total_return = balance - total_deposited
     return_pct = (total_return / total_deposited * 100) if total_deposited > 0 else 0
-
-    # Skor: getiri yüzdesi normalize edilir
-    score = round(_clamp(return_pct * 2.2, 5, 100), 1)
-    status, _ = _risk_status_from_score(score)
 
     advice = (
         f"💰 {months} ay vade sonunda toplam birikiminizin yaklaşık "
@@ -181,9 +180,8 @@ def _engine_birikim(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     return {
-        "score": score,
-        "risk_status": status,
-        "risk_color": "green",
+        "tahmin": round(total_return, 2),
+        "tahmin_label": "Tahmini Net Getiri",
         "metrics": {
             "tahmini_bakiye": round(balance, 2),
             "net_getiri": round(total_return, 2),
@@ -264,17 +262,20 @@ def _engine_yatirim(data: Dict[str, Any]) -> Dict[str, Any]:
     Yatırım Araçları simülasyonu — Risk profiline göre portföy getirisi.
 
     Girdi: yatirim_tutari, risk_tercihi (dusuk/orta/yuksek), vade_yil
-    Çıktı: tahmini portföy değeri + dağılım önerisi
+    Çıktı: tahmini portföy değeri (prediction) + yıllık büyüme projeksiyonu
+
+    Not: Yatırım bir "getiri tahmini"dir. Risk tercihi kullanıcının kendi
+    seçimidir; bu yüzden çıktı 'tahmin' biçimindedir (resultKind: prediction).
     """
     amount = _safe_float(data.get("yatirim_tutari"))
     risk_pref = str(data.get("risk_tercihi", "orta")).lower()
     years = int(_safe_float(data.get("vade_yil"), 3))
 
-    # Risk profiline göre kurgusal yıllık beklenen getiri ve oynaklık
+    # Risk profiline göre kurgusal yıllık beklenen getiri (makul aralık)
     risk_profiles = {
-        "dusuk":  {"getiri": 0.28, "label": "Düşük Risk / Korumacı"},
-        "orta":   {"getiri": 0.42, "label": "Orta Risk / Dengeli"},
-        "yuksek": {"getiri": 0.61, "label": "Yüksek Risk / Agresif"},
+        "dusuk":  {"getiri": 0.15, "label": "Düşük Risk / Korumacı"},
+        "orta":   {"getiri": 0.24, "label": "Orta Risk / Dengeli"},
+        "yuksek": {"getiri": 0.34, "label": "Yüksek Risk / Agresif"},
     }
     profile = risk_profiles.get(risk_pref, risk_profiles["orta"])
     annual_return = profile["getiri"]
@@ -288,8 +289,6 @@ def _engine_yatirim(data: Dict[str, Any]) -> Dict[str, Any]:
 
     total_return = balance - amount
     return_pct = (total_return / amount * 100) if amount > 0 else 0
-    score = round(_clamp(return_pct / years * 1.8, 10, 100), 1)
-    status, _ = _risk_status_from_score(score)
 
     advice = (
         f"📈 {profile['label']} profilinde, {_format_currency(amount)} "
@@ -322,9 +321,8 @@ def _engine_yatirim(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     return {
-        "score": score,
-        "risk_status": status,
-        "risk_color": "green" if risk_pref != "yuksek" else "yellow",
+        "tahmin": round(balance, 2),
+        "tahmin_label": "Tahmini Portföy Değeri",
         "metrics": {
             "tahmini_deger": round(balance, 2),
             "net_getiri": round(total_return, 2),
@@ -341,7 +339,10 @@ def _engine_bireysel_sigorta(data: Dict[str, Any]) -> Dict[str, Any]:
     Bireysel Sigorta simülasyonu — Yaşa ve teminata göre prim tahmini.
 
     Girdi: yas, teminat_tutari, sigorta_tipi (hayat/saglik/kasko)
-    Çıktı: tahmini aylık prim
+    Çıktı: tahmini aylık prim (prediction)
+
+    Not: Sigorta priminde "risk skoru" kavramı yoktur — bu bir prim
+    tahminidir. Çıktı 'tahmin' biçimindedir (resultKind: prediction).
     """
     age = int(_safe_float(data.get("yas"), 35))
     coverage = _safe_float(data.get("teminat_tutari"))
@@ -355,11 +356,6 @@ def _engine_bireysel_sigorta(data: Dict[str, Any]) -> Dict[str, Any]:
     age_coef = max(0, age - 25) * 4.5
     coverage_coef = (coverage / 100_000) * 35.0
     monthly_premium = round(base + age_coef + coverage_coef, 2)
-
-    # Skor: prim/teminat oranı düşükse (verimli) yüksek skor
-    efficiency = (coverage / (monthly_premium * 12)) if monthly_premium > 0 else 0
-    score = round(_clamp(efficiency / 3, 15, 100), 1)
-    status, _ = _risk_status_from_score(score)
 
     type_label = {"hayat": "Hayat", "saglik": "Sağlık", "kasko": "Kasko"}.get(
         insurance_type, "Sağlık"
@@ -384,9 +380,8 @@ def _engine_bireysel_sigorta(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     return {
-        "score": score,
-        "risk_status": status,
-        "risk_color": "green",
+        "tahmin": monthly_premium,
+        "tahmin_label": "Tahmini Aylık Prim",
         "metrics": {
             "aylik_prim": monthly_premium,
             "yillik_prim": round(monthly_premium * 12, 2),

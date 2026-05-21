@@ -49,6 +49,12 @@ from fastapi_cache.backends.inmemory import InMemoryBackend
 from fastapi_cache.decorator import cache
 from redis import asyncio as aioredis
 
+# ─── Google Gemini (ZekaBot Üretken Yapay Zeka) ──────────────────────────
+# genai        : Gemini API istemcisi (google-genai SDK)
+# genai_types  : İstek yapılandırma tipleri (GenerateContentConfig vb.)
+from google import genai
+from google.genai import types as genai_types
+
 from config import settings
 from database import engine, SessionLocal, Base, get_db
 from models import User, BireyselAnalytics, TicariAnalytics, UrunlerAnalytics
@@ -1053,6 +1059,21 @@ _ZEKABOT_INTENTS = [
         ),
     },
     {
+        # NOT: 'about' niyeti, 'loan_application'dan ÖNCE gelmelidir. Aksi
+        # halde "KrediZeka nedir?" sorusundaki 'kredizeka' kelimesi, içinde
+        # 'kredi' geçtiği için yanlışlıkla 'loan_application' ile eşleşir.
+        "keywords": ["kredizeka", "sen kimsin", "ne yapabilirsin", "nedir",
+                     "yardım", "yardim", "ne işe yarar", "kimsin"],
+        "intent": "about",
+        "reply": (
+            "KrediZeka, yapay zeka destekli bir finansal risk asistanıdır. "
+            "Ben ZekaBot olarak kredi notu, borç yönetimi, faiz, yatırım ve "
+            "konut kredisi konularında rehberlik ederim. Ayrıca ana sayfadaki "
+            "Risk Analizi aracıyla kredi onaylanma olasılığınızı hesaplayabilir; "
+            "Bireysel ve Ticari modüllerle finansal simülasyonlar yapabilirsiniz."
+        ),
+    },
+    {
         "keywords": ["kredi", "kredi çek", "kredi cek", "kredi başvuru",
                      "kredi basvuru", "başvuru", "basvuru", "kredi al"],
         "intent": "loan_application",
@@ -1071,18 +1092,6 @@ _ZEKABOT_INTENTS = [
         "reply": (
             "Rica ederim! 😊 Finansal sağlığınız için her zaman buradayım. "
             "Başka bir sorunuz olursa çekinmeden yazın."
-        ),
-    },
-    {
-        "keywords": ["kredizeka", "sen kimsin", "ne yapabilirsin", "nedir",
-                     "yardım", "yardim", "ne işe yarar", "kimsin"],
-        "intent": "about",
-        "reply": (
-            "KrediZeka, yapay zeka destekli bir finansal risk asistanıdır. "
-            "Ben ZekaBot olarak kredi notu, borç yönetimi, faiz, yatırım ve "
-            "konut kredisi konularında rehberlik ederim. Ayrıca ana sayfadaki "
-            "Risk Analizi aracıyla kredi onaylanma olasılığınızı hesaplayabilir; "
-            "Bireysel ve Ticari modüllerle finansal simülasyonlar yapabilirsiniz."
         ),
     },
 ]
@@ -1137,30 +1146,108 @@ def _zekabot_generate_reply(message: str) -> dict:
     return {"reply": _ZEKABOT_FALLBACK, "intent": "fallback"}
 
 
+# ─── Gemini (Gerçek Üretken Yapay Zeka) Entegrasyonu ─────────────────────
+# ZekaBot'un Gemini modeline verdiği rol talimatı (system instruction).
+# Bu metin, modelin kimliğini, görev alanını ve uyması gereken kuralları
+# belirler — modelin "ZekaBot gibi" davranmasını sağlar.
+_GEMINI_SYSTEM_PROMPT = (
+    "Sen ZekaBot'sun — 'KrediZeka' adlı yapay zeka destekli finansal risk "
+    "analizi platformunun sohbet asistanısın. Kullanıcılara kredi, kredi notu, "
+    "borç yönetimi, faiz, yatırım, birikim, konut kredisi ve kredi kartı gibi "
+    "kişisel finans konularında yardımcı olursun.\n\n"
+    "Uyman gereken kurallar:\n"
+    "1. Her zaman Türkçe ve sade, anlaşılır bir dille yanıt ver.\n"
+    "2. Yanıtların kısa ve öz olsun — en fazla 4-5 cümle. Yanıtın küçük bir "
+    "sohbet balonunda gösterilecek.\n"
+    "3. Yalnızca finans, bankacılık ve ekonomi konularında yardımcı ol. "
+    "Konu dışı sorularda kibarca finans konularına geri yönlendir.\n"
+    "4. Gerçek banka/kurum ismi verme; kesin yatırım garantisi vaat etme; "
+    "tavsiyelerini bağlayıcı emir değil, genel bilgi olarak sun.\n"
+    "5. Uygun olduğunda kullanıcıyı KrediZeka ana sayfasındaki ücretsiz "
+    "'Risk Analizi' aracını denemeye yönlendir."
+)
+
+
+def _call_gemini(message: str) -> str:
+    """
+    Google Gemini API'sini çağırıp kullanıcı mesajına gerçek bir LLM yanıtı üretir.
+
+    Bu fonksiyon SENKRON (bloklayıcı) çalışır; bu yüzden endpoint içinde
+    'run_in_threadpool' ile ayrı bir iş parçacığında çağrılır. Böylece Gemini
+    yanıt verene kadar sunucunun olay döngüsü (event loop) bloke olmaz ve
+    diğer istekler hizmet almaya devam eder.
+
+    Hata durumunda (ağ hatası, geçersiz anahtar, kota dolması) istisna fırlatır;
+    çağıran taraf bunu yakalayıp anahtar kelime tabanlı yedek mantığa geçer.
+
+    Returns:
+        str: Gemini'nin ürettiği yanıt metni.
+    """
+    # Her çağrıda hafif bir istemci oluşturulur (yalnızca anahtarı saklar)
+    client = genai.Client(api_key=settings.gemini_api_key)
+    response = client.models.generate_content(
+        model=settings.gemini_model,
+        contents=message,
+        config=genai_types.GenerateContentConfig(
+            system_instruction=_GEMINI_SYSTEM_PROMPT,
+            temperature=0.7,          # yaratıcılık / tutarlılık dengesi
+            max_output_tokens=500,    # yanıt uzunluğu üst sınırı
+        ),
+    )
+    return (response.text or "").strip()
+
+
 @app.post("/api/chat")
 @limiter.limit(settings.chat_rate_limit)
 async def chat(request: Request, req: ChatRequest):
     """
     ZekaBot sohbet asistanı uç noktası.
 
-    Frontend'den gelen serbest metin sorusunu alır, anahtar kelime tabanlı
-    NLP mantığıyla uygun finansal tavsiyeyi üretir ve döndürür.
+    Çalışma stratejisi (iki katmanlı — kademeli azalma / graceful degradation):
 
-    'asyncio.sleep(1)': Gerçek bir dil modelinin (LLM) yanıt üretirken
-    geçirdiği süreyi simüle eder — kullanıcı arayüzünde "ZekaBot yazıyor..."
-    animasyonunun anlamlı görünmesini sağlar.
+      1. ÖNCE GERÇEK YAPAY ZEKA: settings.gemini_api_key tanımlıysa, kullanıcı
+         mesajı Google Gemini API'sine gönderilir ve gerçek bir LLM yanıtı
+         üretilir. Yapay gecikme eklenmez — Gemini'nin kendi yanıt süresi
+         arayüzdeki "yazıyor..." animasyonunu zaten anlamlı kılar.
+
+      2. YEDEK PLAN (FALLBACK): Anahtar tanımlı DEĞİLSE veya Gemini çağrısı
+         herhangi bir nedenle başarısız olursa (ağ hatası, kota, zaman aşımı),
+         anahtar kelime eşleştirme tabanlı yerel mantık devreye girer.
+
+    Bu sayede uygulama, Gemini anahtarı olsun ya da olmasın kesintisiz çalışır.
 
     Rate limit: settings.chat_rate_limit (varsayılan 30/dakika, IP başına)
     """
-    # Model "düşünüyormuş" hissi — yapay 1 saniyelik asenkron gecikme
+    # ─── 1) Gemini yapılandırılmışsa gerçek yapay zekayı dene ──────────
+    if settings.gemini_api_key:
+        try:
+            # Bloklayıcı Gemini çağrısı threadpool'da; 20 sn zaman aşımı korur.
+            # Gemini yanıt vermezse asyncio.wait_for TimeoutError fırlatır.
+            reply = await asyncio.wait_for(
+                run_in_threadpool(_call_gemini, req.message),
+                timeout=20.0,
+            )
+            if reply:
+                return {
+                    "success": True,
+                    "reply": reply,
+                    "intent": "ai_generated",
+                    "source": "gemini",
+                }
+        except Exception as e:
+            # Gemini başarısız → logla ve sessizce yedek mantığa geç
+            print(f"⚠️  Gemini çağrısı başarısız ({type(e).__name__}: {e}). "
+                  f"Anahtar kelime yedeğine geçiliyor.")
+
+    # ─── 2) Yedek plan: anahtar kelime eşleştirme tabanlı NLP ──────────
+    # Model "düşünüyormuş" hissi için yapay 1 saniyelik asenkron gecikme
     await asyncio.sleep(1.0)
-
     payload = _zekabot_generate_reply(req.message)
-
     return {
         "success": True,
         "reply": payload["reply"],
         "intent": payload["intent"],
+        "source": "keyword",
     }
 
 

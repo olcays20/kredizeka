@@ -44,6 +44,18 @@ class Settings(BaseSettings):
     # ─── ML Modeli ──────────────────────────────────────────────────
     model_path: str = "loan_risk_pipeline.pkl"
 
+    # ─── Gemini (ZekaBot Üretken Yapay Zeka) ────────────────────────
+    # ZekaBot sohbet asistanı, bu anahtar TANIMLIYSA gerçek Google Gemini
+    # API'sini kullanır. Anahtar boşsa (varsayılan), ZekaBot anahtar kelime
+    # eşleştirme tabanlı yerel yedek (fallback) mantığıyla çalışmaya devam eder.
+    #
+    # GÜVENLİK: API anahtarı ASLA koda veya git deposuna yazılmaz. Yalnızca
+    # ortam değişkeni (GEMINI_API_KEY) ile sağlanır — yerelde .env dosyası,
+    # üretimde Render ortam değişkeni olarak tanımlanır.
+    gemini_api_key: str = ""
+    # Kullanılacak Gemini modeli — hız/maliyet için 'flash' sürümü idealdir
+    gemini_model: str = "gemini-2.0-flash"
+
     # ─── Varsayılan Admin ───────────────────────────────────────────
     # İlk başlatmada otomatik oluşturulur (sadece sistemde admin yoksa)
     default_admin_tc: str = "11111111111"

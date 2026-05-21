@@ -1,0 +1,107 @@
+# =============================================================================
+# KrediZeka - CI/CD Sürekli Entegrasyon Boru Hattı (GitHub Actions)
+# =============================================================================
+# Bu iş akışı (workflow), 'main' dalına her push yapıldığında otomatik
+# olarak tetiklenir ve aşağıdaki kalite kapılarını (quality gate) çalıştırır:
+#
+#   1. backend-tests   → Python/Pytest birim testleri
+#   2. frontend-tests  → React/Vitest birim testleri
+#
+# İki job paralel çalışır; herhangi biri başarısız olursa boru hattı
+# kırmızıya döner (fail). Bu, hatalı kodun fark edilmeden yayına
+# (production) çıkmasını engelleyen otomatik bir güvenlik ağıdır.
+# =============================================================================
+
+name: KrediZeka CI/CD Pipeline
+
+# ─── Tetikleyici (Trigger) ───────────────────────────────────────────────
+# İş akışı yalnızca 'main' dalına push yapıldığında çalışır.
+on:
+  push:
+    branches:
+      - main
+
+# ─── İşler (Jobs) ────────────────────────────────────────────────────────
+jobs:
+
+  # =========================================================================
+  # JOB 1 — BACKEND TESTLERİ (Python + Pytest)
+  # =========================================================================
+  backend-tests:
+    name: Backend Tests (Python / Pytest)
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Depo kodunu CI çalıştırıcısına indir
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2) Python 3.11 ortamını kur (projenin hedef sürümü)
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3) Python bağımlılıklarını yükle
+      #    requirements.txt; FastAPI, SQLAlchemy, XGBoost, SHAP ve
+      #    test araçlarını (pytest, httpx) içerir.
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 4) ML modelini eğit
+      #    test_ml.py, loan_risk_pipeline.pkl dosyasının varlığını test eder.
+      #    Depoda model olsa bile, CI'da temiz bir eğitimle tutarlılık sağlanır.
+      - name: Train ML model
+        working-directory: ./backend
+        run: python train_model.py
+
+      # 5) Pytest birim testlerini çalıştır
+      #    pytest.ini yapılandırması (testpaths, pythonpath) otomatik okunur.
+      - name: Run backend tests
+        working-directory: ./backend
+        run: python -m pytest
+
+  # =========================================================================
+  # JOB 2 — FRONTEND TESTLERİ (Node.js + Vitest)
+  # =========================================================================
+  frontend-tests:
+    name: Frontend Tests (React / Vitest)
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Depo kodunu CI çalıştırıcısına indir
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2) Node.js 20 (LTS) ortamını kur
+      #    'cache: npm' → npm bağımlılıklarını önbelleğe alır, sonraki
+      #    çalıştırmalar hızlanır.
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ./frontend/package-lock.json
+
+      # 3) Node.js bağımlılıklarını yükle
+      #    'npm ci' → package-lock.json'a birebir uyan, tekrarlanabilir
+      #    (deterministic) bir kurulum yapar; CI ortamı için 'npm install'dan
+      #    daha güvenilirdir.
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      # 4) Vitest birim testlerini çalıştır
+      #    'npm run test' → 'vitest run' (tek seferlik, watch modu kapalı).
+      - name: Run frontend tests
+        working-directory: ./frontend
+        run: npm run test
+
+      # 5) Üretim derlemesinin (production build) başarılı olduğunu doğrula
+      #    Testler geçse bile build kırılabilir; bu adım onu da garanti eder.
+      - name: Verify production build
+        working-directory: ./frontend
+        run: npm run build

@@ -51,7 +51,8 @@ function ScrollToTop() {
 }
 
 // Giriş yapmamış kullanıcıları /giris sayfasına yönlendirir
-function ProtectedRoute({ children }) {
+// (export edilmiştir — birim testlerinde izole olarak test edilir)
+export function ProtectedRoute({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/giris" replace />;
   return children;
@@ -59,7 +60,8 @@ function ProtectedRoute({ children }) {
 
 // Admin yetkisi olmayan kullanıcıları ana sayfaya yönlendirir
 // is_admin = false ise erişimi engeller
-function AdminRoute({ children }) {
+// (export edilmiştir — birim testlerinde izole olarak test edilir)
+export function AdminRoute({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/giris" replace />;
   if (!user.is_admin) return <Navigate to="/" replace />;

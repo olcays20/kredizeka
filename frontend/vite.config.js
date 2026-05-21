@@ -1,18 +1,40 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // =============================================================================
-// KrediZeka - Vite Konfigürasyonu (Production-Optimized)
+// KrediZeka - Vite + Vitest Konfigürasyonu (Production-Optimized)
 // =============================================================================
 // Performans iyileştirmeleri:
 //   - manualChunks: Büyük 3rd-party kütüphaneleri ayrı dosyalara böler
-//     (recharts, jspdf, html2canvas, shap görselleştirme...)
 //   - chunkSizeWarningLimit: 800KB altındaki chunk'lar için uyarı yok
 //   - sourcemap: production'da kapalı (bundle boyutu)
+//
+// Test yapılandırması (Vitest):
+//   - environment: 'jsdom' → tarayıcı DOM'unu Node.js içinde simüle eder
+//   - globals: true → describe/it/expect import gerektirmeden kullanılır
+//   - setupFiles → her testten önce jest-dom matcher'ları yüklenir
 // =============================================================================
 
 export default defineConfig({
   plugins: [react()],
+
+  // ─── Vitest Test Yapılandırması ──────────────────────────────────────
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    // jsdom'a geçerli bir URL verilir — aksi halde 'about:blank' opaque
+    // origin'inde localStorage erişilemez (SecurityError / undefined).
+    environmentOptions: {
+      jsdom: {
+        url: 'http://localhost:3000',
+      },
+    },
+    setupFiles: './src/test/setup.js',
+    css: true,                    // CSS importları test sırasında hata vermesin
+    // node_modules ve build çıktısı test taramasından hariç tutulur
+    exclude: ['node_modules', 'dist'],
+  },
 
   build: {
     // Üretimde source map gerekmez (geliştirici aracında debug için)

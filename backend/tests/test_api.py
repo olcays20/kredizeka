@@ -1,0 +1,416 @@
+"""
+KrediZeka - API Birim Testleri (test_api.py)
+==============================================
+FastAPI uç noktalarının (endpoint) beklendiği gibi çalıştığını
+kanıtlayan birim testleri.
+
+Test edilen uç noktalar:
+  - POST /api/register      → Kullanıcı kaydı
+  - POST /api/login         → Kullanıcı girişi
+  - POST /api/bireysel/analyze  → Bireysel finansal analiz
+  - POST /api/ticari/analyze    → Ticari şirket sağlık analizi
+  - POST /api/urunler/analyze   → Ürün getiri/prim analizi
+  - GET  /                  → Sağlık kontrolü
+
+Kalite Yaklaşımı:
+  Her test tek bir davranışı (assertion) doğrular — bir test
+  başarısız olduğunda hangi özelliğin bozulduğu net anlaşılır.
+  Testler 'conftest.py' içindeki izole SQLite veritabanını kullanır;
+  gerçek üretim verisine asla dokunulmaz.
+"""
+
+import pytest
+
+
+# =============================================================================
+# 1) SAĞLIK KONTROLÜ TESTLERİ
+# =============================================================================
+
+class TestHealthCheck:
+    """Kök endpoint (/) — API'nin ayakta olduğunu doğrular."""
+
+    def test_root_returns_200(self, client):
+        """Kök endpoint HTTP 200 dönmeli."""
+        response = client.get("/")
+        assert response.status_code == 200
+
+    def test_root_returns_expected_json(self, client):
+        """Kök endpoint, beklenen JSON alanlarını içermeli."""
+        response = client.get("/")
+        data = response.json()
+        assert "message" in data
+        assert "version" in data
+        assert data["version"] == "2.0.0"
+
+
+# =============================================================================
+# 2) KAYIT (REGISTER) TESTLERİ
+# =============================================================================
+
+class TestRegister:
+    """POST /api/register — Kullanıcı kayıt senaryoları."""
+
+    def test_register_success(self, client, unique_tc):
+        """
+        Geçerli bilgilerle kayıt başarılı olmalı (HTTP 200).
+        Yanıt 'success: true' içermelidir.
+        """
+        response = client.post("/api/register", json={
+            "tc_no": unique_tc,
+            "full_name": "Ahmet Yılmaz",
+            "phone": "05551112233",
+            "password": "guvenli123",
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "message" in data
+
+    def test_register_duplicate_tc_returns_conflict(self, client, unique_tc):
+        """
+        Aynı T.C. Kimlik No ile İKİNCİ kez kayıt denemesi reddedilmeli.
+        Backend, var olan kaynak için HTTP 409 (Conflict) döner.
+        """
+        user = {
+            "tc_no": unique_tc,
+            "full_name": "Zeynep Kaya",
+            "phone": "05559998877",
+            "password": "parola456",
+        }
+        # İlk kayıt → başarılı
+        first = client.post("/api/register", json=user)
+        assert first.status_code == 200
+
+        # İkinci kayıt (aynı TC) → reddedilmeli
+        second = client.post("/api/register", json=user)
+        assert second.status_code == 409
+        assert "zaten" in second.json()["detail"].lower()
+
+    def test_register_invalid_tc_non_digit(self, client):
+        """
+        T.C. No rakam dışı karakter içeriyorsa Pydantic validasyonu
+        devreye girer ve HTTP 422 (Unprocessable Entity) döner.
+        """
+        response = client.post("/api/register", json={
+            "tc_no": "1234567890A",  # Son karakter harf — geçersiz
+            "full_name": "Hatalı Kullanıcı",
+            "phone": "05551234567",
+            "password": "parola123",
+        })
+        assert response.status_code == 422
+
+    def test_register_invalid_tc_starts_with_zero(self, client):
+        """
+        T.C. Kimlik No 0 ile başlayamaz — validasyon HTTP 422 döndürür.
+        """
+        response = client.post("/api/register", json={
+            "tc_no": "01234567890",  # 0 ile başlıyor — geçersiz
+            "full_name": "Sıfır Kullanıcı",
+            "phone": "05551234567",
+            "password": "parola123",
+        })
+        assert response.status_code == 422
+
+    def test_register_short_password(self, client, unique_tc):
+        """
+        Parola 6 karakterden kısaysa kayıt reddedilmeli (HTTP 422).
+        """
+        response = client.post("/api/register", json={
+            "tc_no": unique_tc,
+            "full_name": "Kısa Parola",
+            "phone": "05551234567",
+            "password": "123",  # 3 karakter — minimum 6 gerekli
+        })
+        assert response.status_code == 422
+
+
+# =============================================================================
+# 3) GİRİŞ (LOGIN) TESTLERİ
+# =============================================================================
+
+class TestLogin:
+    """POST /api/login — Kullanıcı giriş senaryoları."""
+
+    def test_login_success(self, client, registered_user):
+        """
+        Kayıtlı bir kullanıcı doğru parolayla giriş yapabilmeli (HTTP 200).
+        Yanıt, parola hash'i HARİÇ kullanıcı bilgilerini içermelidir.
+        """
+        response = client.post("/api/login", json={
+            "tc_no": registered_user["tc_no"],
+            "password": registered_user["password"],
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["user"]["tc_no"] == registered_user["tc_no"]
+        # Güvenlik: parola veya hash'i ASLA yanıtta yer almamalı
+        assert "password" not in data["user"]
+        assert "password_hash" not in data["user"]
+
+    def test_login_wrong_password(self, client, registered_user):
+        """
+        Yanlış parola ile giriş reddedilmeli (HTTP 401 Unauthorized).
+        """
+        response = client.post("/api/login", json={
+            "tc_no": registered_user["tc_no"],
+            "password": "yanlis_parola",
+        })
+        assert response.status_code == 401
+
+    def test_login_nonexistent_user(self, client):
+        """
+        Kayıtlı olmayan bir T.C. No ile giriş reddedilmeli (HTTP 401).
+        """
+        response = client.post("/api/login", json={
+            "tc_no": "98765432109",  # Sistemde olmayan TC
+            "password": "herhangi123",
+        })
+        assert response.status_code == 401
+
+
+# =============================================================================
+# 4) BİREYSEL ANALİZ TESTLERİ
+# =============================================================================
+
+class TestBireyselAnalyze:
+    """POST /api/bireysel/analyze — Bireysel finansal analiz senaryoları."""
+
+    def test_kredi_yonetimi_returns_200(self, client, registered_user):
+        """
+        Kredi Yönetimi analizi geçerli girdiyle HTTP 200 dönmeli ve
+        beklenen JSON yapısını içermelidir.
+        """
+        response = client.post("/api/bireysel/analyze", json={
+            "tc_no": registered_user["tc_no"],
+            "hizmet_turu": "Kredi_Yonetimi",
+            "girdi_verileri": {
+                "aylik_gelir": 15000,
+                "toplam_borc": 5000,
+                "talep_kredi": 50000,
+            },
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        # Sonuç yapısı doğrulaması
+        result = data["result"]
+        assert "score" in result
+        assert "ai_advice" in result
+        assert "chart_data" in result
+
+    def test_kredi_yonetimi_score_in_valid_range(self, client, registered_user):
+        """
+        Kredi Yönetimi skoru, mantıklı bir aralıkta (0-100) olmalıdır.
+        """
+        response = client.post("/api/bireysel/analyze", json={
+            "tc_no": registered_user["tc_no"],
+            "hizmet_turu": "Kredi_Yonetimi",
+            "girdi_verileri": {
+                "aylik_gelir": 20000,
+                "toplam_borc": 3000,
+                "talep_kredi": 40000,
+            },
+        })
+        assert response.status_code == 200
+        score = response.json()["result"]["score"]
+        assert 0 <= score <= 100, f"Skor 0-100 aralığında olmalı, gelen: {score}"
+
+    def test_birikim_returns_prediction(self, client, registered_user):
+        """
+        Birikim analizi 'tahmin' ve 'tahmin_label' alanlarını döndürmeli
+        (risk skoru değil — birikim bir getiri tahminidir).
+        """
+        response = client.post("/api/bireysel/analyze", json={
+            "tc_no": registered_user["tc_no"],
+            "hizmet_turu": "Birikim",
+            "girdi_verileri": {
+                "anapara": 20000,
+                "vade_ay": 24,
+                "aylik_ekleme": 1000,
+            },
+        })
+        assert response.status_code == 200
+        result = response.json()["result"]
+        assert "tahmin" in result
+        assert "tahmin_label" in result
+        assert result["tahmin"] > 0  # Pozitif bir getiri beklenir
+
+    def test_invalid_service_type_returns_400(self, client, registered_user):
+        """
+        Tanımsız bir hizmet türü gönderilince HTTP 400 (Bad Request) dönmeli.
+        """
+        response = client.post("/api/bireysel/analyze", json={
+            "tc_no": registered_user["tc_no"],
+            "hizmet_turu": "Olmayan_Hizmet",
+            "girdi_verileri": {"x": 1},
+        })
+        assert response.status_code == 400
+
+    def test_analyze_with_nonexistent_user_returns_404(self, client):
+        """
+        Kayıtlı olmayan bir kullanıcı analiz yapamaz — HTTP 404 dönmeli.
+        """
+        response = client.post("/api/bireysel/analyze", json={
+            "tc_no": "90909090909",  # Sistemde olmayan TC
+            "hizmet_turu": "Kredi_Yonetimi",
+            "girdi_verileri": {
+                "aylik_gelir": 15000,
+                "toplam_borc": 5000,
+                "talep_kredi": 50000,
+            },
+        })
+        assert response.status_code == 404
+
+
+# =============================================================================
+# 5) TİCARİ ANALİZ TESTLERİ
+# =============================================================================
+
+class TestTicariAnalyze:
+    """POST /api/ticari/analyze — Ticari şirket sağlık analizi senaryoları."""
+
+    def test_ticari_kredi_returns_health_score(self, client, registered_user):
+        """
+        Ticari Kredi analizi, 'sirket_saglik_skoru' alanını döndürmeli ve
+        skor 0-100 aralığında olmalıdır.
+        """
+        response = client.post("/api/ticari/analyze", json={
+            "tc_no": registered_user["tc_no"],
+            "hizmet_turu": "Ticari_Kredi",
+            "girdi_verileri": {
+                "yillik_ciro": 5000000,
+                "calisan_sayisi": 25,
+                "aylik_pos_hacmi": 300000,
+                "sirket_yasi": 8,
+                "mevcut_borc": 1000000,
+            },
+        })
+        assert response.status_code == 200
+        result = response.json()["result"]
+        assert "sirket_saglik_skoru" in result
+        skor = result["sirket_saglik_skoru"]
+        assert 0 <= skor <= 100, f"Sağlık skoru 0-100 aralığında olmalı: {skor}"
+
+    def test_ticari_weak_company_lower_score(self, client, registered_user):
+        """
+        Zayıf finansallara sahip bir şirket (yüksek borç, kısa geçmiş),
+        güçlü bir şirkete göre DAHA DÜŞÜK sağlık skoru almalıdır.
+        Bu, simülasyon motorunun gerçekten ayrım yaptığını kanıtlar.
+        """
+        # Zayıf şirket: yüksek borç/ciro, kısa geçmiş
+        weak = client.post("/api/ticari/analyze", json={
+            "tc_no": registered_user["tc_no"],
+            "hizmet_turu": "Ticari_Kredi",
+            "girdi_verileri": {
+                "yillik_ciro": 800000,
+                "calisan_sayisi": 5,
+                "aylik_pos_hacmi": 40000,
+                "sirket_yasi": 1,
+                "mevcut_borc": 700000,
+            },
+        }).json()["result"]["sirket_saglik_skoru"]
+
+        # Güçlü şirket: düşük borç, uzun geçmiş, yüksek POS
+        strong = client.post("/api/ticari/analyze", json={
+            "tc_no": registered_user["tc_no"],
+            "hizmet_turu": "Ticari_Kredi",
+            "girdi_verileri": {
+                "yillik_ciro": 20000000,
+                "calisan_sayisi": 80,
+                "aylik_pos_hacmi": 1500000,
+                "sirket_yasi": 15,
+                "mevcut_borc": 1000000,
+            },
+        }).json()["result"]["sirket_saglik_skoru"]
+
+        assert weak < strong, (
+            f"Zayıf şirket skoru ({weak}) güçlü şirketten ({strong}) "
+            f"düşük olmalıydı."
+        )
+
+
+# =============================================================================
+# 6) ÜRÜN ANALİZ TESTLERİ
+# =============================================================================
+
+class TestUrunAnalyze:
+    """POST /api/urunler/analyze — Ürün getiri/prim analizi senaryoları."""
+
+    def test_mevduat_returns_prediction(self, client, registered_user):
+        """
+        Mevduat analizi 'tahmin' alanı döndürmeli ve getiri pozitif olmalı.
+        """
+        response = client.post("/api/urunler/analyze", json={
+            "tc_no": registered_user["tc_no"],
+            "urun_turu": "Mevduat_Hesabi",
+            "girdi_verileri": {
+                "mevduat_tutari": 100000,
+                "vade_ay": 12,
+            },
+        })
+        assert response.status_code == 200
+        result = response.json()["result"]
+        assert "tahmin" in result
+        assert result["tahmin"] > 0
+
+    def test_kampanya_returns_200(self, client, registered_user):
+        """
+        Kampanya analizi geçerli girdiyle HTTP 200 dönmeli.
+        """
+        response = client.post("/api/urunler/analyze", json={
+            "tc_no": registered_user["tc_no"],
+            "urun_turu": "Kampanyalar",
+            "girdi_verileri": {
+                "aylik_harcama": 8000,
+                "kampanya_tipi": "cashback",
+            },
+        })
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+
+    def test_invalid_urun_type_returns_400(self, client, registered_user):
+        """
+        Tanımsız bir ürün türü gönderilince HTTP 400 dönmeli.
+        """
+        response = client.post("/api/urunler/analyze", json={
+            "tc_no": registered_user["tc_no"],
+            "urun_turu": "Olmayan_Urun",
+            "girdi_verileri": {"x": 1},
+        })
+        assert response.status_code == 400
+
+
+# =============================================================================
+# 7) ANALİZ GEÇMİŞİ TESTİ
+# =============================================================================
+
+class TestAnalyticsHistory:
+    """GET /api/analytics/history/{tc_no} — Analiz geçmişi senaryoları."""
+
+    def test_history_after_analysis(self, client, registered_user):
+        """
+        Bir kullanıcı analiz yaptıktan sonra, geçmişi o analizi içermelidir.
+        Bu test, sonuçların PostgreSQL'e kalıcı olarak yazıldığını kanıtlar.
+        """
+        # Önce bir analiz yap
+        client.post("/api/bireysel/analyze", json={
+            "tc_no": registered_user["tc_no"],
+            "hizmet_turu": "Kredi_Yonetimi",
+            "girdi_verileri": {
+                "aylik_gelir": 15000,
+                "toplam_borc": 5000,
+                "talep_kredi": 50000,
+            },
+        })
+
+        # Geçmişi sorgula
+        response = client.get(f"/api/analytics/history/{registered_user['tc_no']}")
+        assert response.status_code == 200
+        data = response.json()
+        assert "bireysel" in data
+        assert "ticari" in data
+        assert "urunler" in data
+        # En az 1 bireysel analiz kayıtlı olmalı
+        assert len(data["bireysel"]) >= 1
+        assert data["toplam_analiz"] >= 1

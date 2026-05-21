@@ -1191,7 +1191,12 @@ def _call_gemini(message: str) -> str:
         config=genai_types.GenerateContentConfig(
             system_instruction=_GEMINI_SYSTEM_PROMPT,
             temperature=0.7,          # yaratıcılık / tutarlılık dengesi
-            max_output_tokens=500,    # yanıt uzunluğu üst sınırı
+            max_output_tokens=800,    # yanıt uzunluğu üst sınırı
+            # thinking_budget=0: Gemini 2.5 modellerinin "düşünme" (thinking)
+            # aşamasını kapatır. Kısa sohbet yanıtları için düşünme gereksizdir;
+            # kapatınca yanıt hem daha hızlı gelir hem de token bütçesinin
+            # tamamı görünür metne ayrılır (yanıt yarıda kesilmez).
+            thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
         ),
     )
     return (response.text or "").strip()

@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     # üretimde Render ortam değişkeni olarak tanımlanır.
     gemini_api_key: str = ""
     # Kullanılacak Gemini modeli — hız/maliyet için 'flash' sürümü idealdir
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-2.5-flash"
 
     # ─── Varsayılan Admin ───────────────────────────────────────────
     # İlk başlatmada otomatik oluşturulur (sadece sistemde admin yoksa)

@@ -17,10 +17,9 @@
 
 <br />
 
-[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-kredizeka.vercel.app-000000?style=for-the-badge)](https://kredizeka.vercel.app)
-[![API](https://img.shields.io/badge/⚙️_API-Render-46E3B7?style=for-the-badge)](https://kredizeka.onrender.com)
-[![ML](https://img.shields.io/badge/🧠_Model-XGBoost%20%2B%20SHAP-FF6F00?style=for-the-badge)](https://github.com/olcays20/kredizeka)
-[![Accuracy](https://img.shields.io/badge/Accuracy-98.75%25-success?style=for-the-badge)](https://github.com/olcays20/kredizeka)
+[![Live Demo](https://img.shields.io/badge/🌐_Canlı_Demo-kredizeka.vercel.app-000000?style=for-the-badge)](https://kredizeka.vercel.app)
+[![ML Model](https://img.shields.io/badge/🧠_Model-XGBoost%20%2B%20SHAP-FF6F00?style=for-the-badge)](#kullanılan-ai-araçları)
+[![Accuracy](https://img.shields.io/badge/Doğruluk-%2098.75-success?style=for-the-badge)](#proje-özeti)
 
 **🇹🇷 [Türkçe](#-türkçe) · 🇬🇧 [English](#-english)**
 
@@ -28,42 +27,17 @@
 
 ---
 
-## 🎬 Demo & Ekran Görüntüleri
-
-> **🌐 Canlı Demo:** [kredizeka.vercel.app](https://kredizeka.vercel.app)
->
-> **👤 Test Yönetici Hesabı:** T.C. `11111111111` · Şifre `admin123`
-
-<table>
-<tr>
-<td align="center">
-  <strong>🏠 Ana Sayfa</strong><br />
-  <em>Stepper formu ile 3 adımlı risk analizi</em>
-</td>
-<td align="center">
-  <strong>🧠 SHAP Etki Grafiği</strong><br />
-  <em>Açıklanabilir yapay zekâ ile karar analizi</em>
-</td>
-</tr>
-<tr>
-<td align="center">
-  <strong>🌙 Karanlık Tema</strong><br />
-  <em>Tek tıkla aydınlık ⇄ karanlık geçiş</em>
-</td>
-<td align="center">
-  <strong>📊 Yönetici Paneli</strong><br />
-  <em>8 KPI kartı + son kullanıcılar tablosu</em>
-</td>
-</tr>
-</table>
-
-> 📸 *Ekran görüntüleri ilk live test sonrasında `docs/screenshots/` altında yayımlanacak.*
-
----
-
 ## 🇹🇷 Türkçe
 
-> Açıklanabilir yapay zekâ (XAI), PostgreSQL kalıcı veri katmanı, Docker konteyner mimarisi ve çift dil desteğiyle uçtan uca üretilmiş bir akademik portföy projesi.
+> Açıklanabilir yapay zekâ (XAI), PostgreSQL kalıcı veri katmanı, Docker konteyner mimarisi ve çift dil desteğiyle uçtan uca geliştirilmiş bir akademik portföy projesi.
+
+### İçindekiler
+
+- [Proje Özeti](#proje-özeti)
+- [Kullanılan AI Araçları](#kullanılan-ai-araçları)
+- [Prompt Kütüphanesi](#prompt-kütüphanesi)
+- [Kurulum ve Çalıştırma](#kurulum-ve-çalıştırma)
+- [Gelecek Vizyonu](#gelecek-vizyonu)
 
 ---
 
@@ -88,20 +62,20 @@ Geleneksel kredi değerlendirme süreçleri opak ve kullanıcıya kapalıdır. K
 
 | Özellik | Açıklama |
 |---|---|
-| **XGBoost ML Modeli** | GridSearchCV ile hiperparametre optimize edilmiş, %98+ doğruluğa sahip gradient boosting modeli |
-| **SHAP Açıklanabilirlik** | Her tahminin arkasındaki kararı oluşturan en etkili 5 faktörü yatay bar grafikle gösterir |
+| **XGBoost ML Modeli** | GridSearchCV ile hiperparametre optimize edilmiş, %98.75 doğruluğa sahip gradient boosting modeli |
+| **SHAP Açıklanabilirlik** | Her tahminin arkasındaki en etkili faktörleri yatay bar grafikle gösterir |
+| **Adımlı Risk Analizi** | 3 aşamalı sihirbaz form: Kişisel Durum → Finansal Veriler → Sonuç |
 | **PostgreSQL + SQLAlchemy** | Üretim seviyesinde kalıcı veri katmanı (SQLite fallback ile yerel test desteği) |
-| **Docker Compose** | 3 servis (db/backend/frontend) tek komutla ayağa kalkar |
-| **Rate Limiting** | `slowapi` ile IP tabanlı brute-force koruması (giriş: 5/dk, analiz: 10/dk) |
-| **Background Tasks** | FastAPI BackgroundTasks ile asenkron e-posta simülasyonu — kullanıcı bekletilmez |
-| **JWT-Hazır RBAC** | `is_admin` rolü ile yönetici paneli ve `X-User-TC` header tabanlı yetki guard |
-| **Çoklu Dil (i18n)** | react-i18next ile TR/EN tam çeviri, localStorage cache |
-| **Dark Mode** | Tailwind class-based dark theme, Sun/Moon toggle, sistem tercihi algılama |
-| **Stepper Form** | 3 adımlı wizard ile risk analizi (kişisel → finansal → sonuç) |
-| **PDF Export** | html2canvas + jsPDF ile yüksek çözünürlüklü A4 rapor indirme |
-| **Recharts Grafikler** | Pasta grafiği (finansal dağılım) + yatay bar grafiği (SHAP etki) |
-| **Bcrypt Şifreleme** | Parolalar tuzlu hash olarak saklanır; düz metin asla |
-| **Profil Fotoğrafı** | Base64 yükleme + boyut/format doğrulama |
+| **Docker Compose** | 3 servis (veritabanı / backend / frontend) tek komutla ayağa kalkar |
+| **Rate Limiting** | IP tabanlı brute-force koruması (kayıt/giriş ve analiz uç noktalarında) |
+| **Asenkron İşlemler** | FastAPI BackgroundTasks ile e-posta bildirimleri — kullanıcı bekletilmez |
+| **Rol Tabanlı Erişim** | Yönetici paneli ve `is_admin` rolü ile RBAC mimarisi |
+| **Çoklu Dil (i18n)** | react-i18next ile tam Türkçe/İngilizce çeviri, tercih kaydı |
+| **Karanlık Tema** | Tailwind class-based dark mode, sistem tercihi algılama |
+| **PDF Rapor** | Analiz sonucunu yüksek çözünürlüklü A4 belge olarak indirme |
+| **Veri Görselleştirme** | Recharts ile pasta grafiği ve SHAP etki grafiği |
+| **Güvenli Kimlik Doğrulama** | Bcrypt ile tuzlu hash; parolalar asla düz metin saklanmaz |
+| **Profil Yönetimi** | Profil fotoğrafı yükleme, meslek ve adres güncelleme |
 
 ---
 
@@ -110,17 +84,17 @@ Geleneksel kredi değerlendirme süreçleri opak ve kullanıcıya kapalıdır. K
 Bu projeyi geliştirirken, üretkenliği artırmak amacıyla aşağıdaki yapay zekâ araçlarından yararlandım. Tasarım kararları, mimari seçimler, problem tanımı ve uygulama testleri tamamen kendi sorumluluğumdadır; AI araçları yardımcı bir hızlandırıcı olarak konumlandırılmıştır.
 
 #### Kod Üretimi
-- **Claude Code (Anthropic)** — Tekrarlayan kalıpların (CRUD endpoint'leri, Tailwind sınıfları, i18n çevirileri) hızlı şekilde yazılmasında yardımcı olarak kullandım. Üretilen tüm kodları proje gereksinimlerime göre düzenleyip test ettim.
+- **Claude Code (Anthropic)** — Tekrarlayan kalıpların (CRUD endpoint'leri, Tailwind sınıfları, i18n çevirileri) hızlı yazılmasında yardımcı olarak kullandım. Üretilen tüm kodları proje gereksinimlerime göre düzenleyip test ettim.
 - **GitHub Copilot** — VS Code içinde satır içi öneriler ve docstring tamamlama için kullandım.
 
 #### UI Tasarımı
-- **Claude (Anthropic)** — Tailwind utility sınıflarıyla bileşen iskeleti üretmek için kullandım. Referans olarak Findeks ve modern Türk bankacılık arayüzlerini esas aldım; renk paleti, tipografi ve düzen kararlarını kendim verdim.
+- **Claude (Anthropic)** — Tailwind utility sınıflarıyla bileşen iskeleti üretmek için kullandım. Renk paleti, tipografi ve düzen kararlarını kendim verdim; referans olarak modern Türk bankacılık arayüzlerini esas aldım.
 
 #### Veri Üretimi
-- **Claude (Anthropic)** — Model eğitiminde kullanılacak sentetik finansal veri setini (German Credit Risk benzeri, 6.000 satır) üretmek için yardım aldım. Veri dağılımları ve etiket kurallarını finansal mantığa uygun şekilde kendim doğruladım.
+- **Claude (Anthropic)** — Model eğitiminde kullanılacak sentetik finansal veri setini (German Credit Risk benzeri, 6.000 satır) üretmek için yardım aldım. Veri dağılımlarını ve etiket kurallarını finansal mantığa uygun şekilde kendim doğruladım.
 
 #### İçerik Üretimi
-- **Claude (Anthropic)** — KVKK uyumlu hukuki metinler (Gizlilik Politikası, Kullanım Koşulları) ve haber/blog metinleri için ilk taslakları üretmekte kullandım. Tüm içerikleri marka diline ve akademik proje kapsamına göre yeniden düzenledim.
+- **Claude (Anthropic)** — KVKK uyumlu hukuki metinler (Gizlilik Politikası, Kullanım Koşulları) ve haber metinleri için ilk taslakları üretmekte kullandım. Tüm içerikleri marka diline ve akademik proje kapsamına göre yeniden düzenledim.
 
 ---
 
@@ -138,31 +112,29 @@ etki) JSON olarak döndür. CPU-bound işlemleri run_in_threadpool ile asenkron 
 Türetilmiş özellikler (dti_ratio, lti_ratio) backend'de hesaplansın.
 ```
 
-**Backend — Rate Limiting + Background Tasks:**
+**Backend — Rate Limiting + Asenkron İşlemler:**
 ```
-FastAPI'de slowapi entegre et. /api/login ve /api/register için IP başına 5/dakika
-limit koy. Limit aşılınca 429 dönsün. Ayrıca her başarılı kayıttan sonra
-BackgroundTasks ile asenkron bir e-posta simülasyon servisi tetikle (şimdilik
-sadece terminale log atsın).
+FastAPI'de slowapi entegre et. Kayıt ve giriş uç noktaları için IP başına dakikalık
+istek limiti koy. Limit aşılınca 429 dönsün. Ayrıca her başarılı kayıttan sonra
+BackgroundTasks ile asenkron bir e-posta bildirim servisi tetikle.
 ```
 
-**Backend — SQLAlchemy + PostgreSQL Migration:**
+**Backend — SQLAlchemy + PostgreSQL Geçişi:**
 ```
 SQLite kullanan mevcut backend'i SQLAlchemy 2.0 + PostgreSQL'e taşı. database.py
-ve models.py ayrı dosyalar olsun. pydantic-settings ile DATABASE_URL env'den
-okunsun. Geriye uyumluluk için SQLite fallback bırak. Eski şemaya migration
-(ALTER TABLE) yap.
+ve models.py ayrı dosyalar olsun. pydantic-settings ile DATABASE_URL ortam
+değişkeninden okunsun. Geriye uyumluluk için SQLite fallback bırak.
 ```
 
-**Frontend — Stepper Wizard:**
+**Frontend — Adımlı Sihirbaz Form:**
 ```
 React + Tailwind ile 3 adımlı (Kişisel / Finansal / Sonuç) yatay stepper formu
-oluştur. Her adımda validation yap, sonra "İleri" butonu sonraki adıma geçsin.
-Tamamlanan adımlar yeşil tikli görünsün, aktif adım büyütülmüş primary renkli,
-sonraki adımlar gri. Animasyonlu geçiş ve "Geri" butonu olsun.
+oluştur. Her adımda doğrulama yap, sonra "İleri" butonu sonraki adıma geçsin.
+Tamamlanan adımlar yeşil tikli, aktif adım büyütülmüş primary renkli görünsün.
+Animasyonlu geçiş ve "Geri" butonu olsun.
 ```
 
-**Frontend — Dark Mode Context:**
+**Frontend — Karanlık Tema Yönetimi:**
 ```
 React Context ile dark/light tema yönetimi yaz. İlk yükleme önceliği:
 localStorage > prefers-color-scheme > 'light'. Tema değişiminde <html> sınıfına
@@ -172,25 +144,24 @@ ile uyumlu olsun.
 
 #### Veri Üretim Promptları
 
-**Sentetik German Credit Risk Veri Seti:**
+**Sentetik Finansal Veri Seti:**
 ```
-Numpy + Pandas ile 6000 satırlık sentetik finansal veri seti üret. Sütunlar:
+NumPy + Pandas ile 6000 satırlık sentetik finansal veri seti üret. Sütunlar:
 income (log-normal), debt (gelirin %0-150'si), loan_amount (log-normal),
 age (normal 18-75), employment_years (yaşa bağlı), credit_history (0-5 beta),
 dependents (Poisson), savings_balance (log-normal). Etiket için lojistik
 fonksiyon kullan: pozitif faktörler (geçmiş, tecrübe, birikim) ve negatif
-faktörler (DTI, LTI, bakmakla yükümlü) puanı belirlesin. ~%55 onay oranı hedefle.
+faktörler (DTI, LTI, bakmakla yükümlü) puanı belirlesin.
 ```
 
 #### UI Üretim Promptları
 
-**Recharts Yatay SHAP BarChart:**
+**Recharts Yatay SHAP Grafiği:**
 ```
-Recharts ile yatay BarChart oluştur. SHAP değerlerine göre top 5 faktörü göster.
-Pozitif değerler emerald (#10b981), negatif değerler red (#ef4444) renkli olsun.
-Y ekseni feature ismi (Türkçe etiket), X ekseni SHAP değeri. Tooltip'te
-"+0.420 → Olumlu Etki" formatında göster. Dark mode'da CartesianGrid ve text
-renkleri otomatik adapte olsun.
+Recharts ile yatay BarChart oluştur. SHAP değerlerine göre en etkili 5 faktörü
+göster. Pozitif değerler emerald, negatif değerler red renkli olsun. Y ekseni
+faktör ismi, X ekseni SHAP değeri. Tooltip'te "+0.420 → Olumlu Etki" formatında
+göster. Karanlık tema ile uyumlu olsun.
 ```
 
 #### İçerik Üretim Promptları
@@ -200,7 +171,7 @@ renkleri otomatik adapte olsun.
 KrediZeka için KVKK (6698) uyumlu Türkçe Gizlilik Politikası metni yaz. 7 bölüm:
 Veri Sorumlusu, Toplanan Veriler, İşlenme Amacı, Saklama ve Güvenlik, Üçüncü
 Taraflarla Paylaşım, Çerezler Politikası, KVKK Madde 11 Hakları. Gerçekçi hukuki
-terminoloji kullan. Hem TR hem EN versiyonları üret.
+terminoloji kullan. Hem Türkçe hem İngilizce versiyonları üret.
 ```
 
 ---
@@ -218,19 +189,17 @@ cd kredizeka
 
 # 2. Ortam değişkenlerini hazırla
 cp .env.example .env
-# (.env içindeki şifreleri istersen güncelle)
 
 # 3. Tüm servisleri başlat
 docker compose up --build
 ```
 
-Erişim:
+Erişim noktaları:
 - **Frontend** → http://localhost
 - **Backend API** → http://localhost:8000
-- **Swagger Docs** → http://localhost:8000/docs
-- **PostgreSQL** → localhost:5432
+- **API Dokümantasyonu (Swagger)** → http://localhost:8000/docs
 
-İlk açılışta backend, modeli (`loan_risk_pipeline.pkl`) otomatik eğitir ve veritabanı şemasını oluşturur. Varsayılan admin hesabı: `11111111111` / `admin123`.
+İlk açılışta backend, veritabanı şemasını otomatik oluşturur. Varsayılan yönetici hesabı, `.env` dosyasındaki `DEFAULT_ADMIN_*` değişkenleri kullanılarak otomatik tanımlanır.
 
 #### Yöntem 2: Yerel Geliştirme (Docker'sız)
 
@@ -253,13 +222,12 @@ npm run dev
 
 Frontend `http://localhost:5173` adresinde açılır, backend'e `http://localhost:8000` üzerinden bağlanır.
 
-#### API Örnekleri
+#### API Örneği
 
-**Risk Analizi:**
+**Risk Analizi İsteği:**
 ```bash
 curl -X POST http://localhost:8000/api/analyze \
   -H "Content-Type: application/json" \
-  -H "X-User-TC: 12345678901" \
   -d '{
     "income": 15000,
     "debt": 3000,
@@ -279,29 +247,16 @@ curl -X POST http://localhost:8000/api/analyze \
   "risk_status": "Düşük Risk",
   "dti": 20.0,
   "lti": 3.33,
-  "ai_advice": "🎉 Tebrikler! Kredi onaylanma skorunuz 78/100...",
+  "ai_advice": "Tebrikler! Kredi onaylanma skorunuz...",
   "top_factors": [
     {
       "feature": "credit_history",
       "label_tr": "Kredi Geçmişi",
-      "label_en": "Credit History",
       "shap_value": 0.42,
-      "abs_value": 0.42,
-      "impact": "positive",
-      "input_value": 4
-    },
-    {
-      "feature": "dti_ratio",
-      "label_tr": "Borç/Gelir Oranı",
-      "label_en": "Debt-to-Income Ratio",
-      "shap_value": -0.18,
-      "abs_value": 0.18,
-      "impact": "negative",
-      "input_value": 20.0
+      "impact": "positive"
     }
   ],
   "model_meta": {
-    "version": "2.0",
     "algorithm": "XGBoost",
     "explainability": "SHAP TreeExplainer"
   }
@@ -311,32 +266,31 @@ curl -X POST http://localhost:8000/api/analyze \
 #### Mimari Genel Bakış
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Kullanıcı (Tarayıcı)                  │
-└────────────────────────┬────────────────────────────────┘
-                         │
-                ┌────────▼─────────┐
-                │  Nginx (Port 80) │  ← Frontend container
-                │  React SPA       │
-                │  - Stepper Form  │
-                │  - SHAP BarChart │
-                │  - Dark Mode     │
-                │  - i18n TR/EN    │
-                └────────┬─────────┘
-                         │ HTTP (CORS)
-                ┌────────▼─────────┐
-                │  FastAPI (8000)  │  ← Backend container
-                │  - XGBoost +SHAP │
-                │  - Rate Limit    │
-                │  - BgTasks       │
-                │  - SQLAlchemy    │
-                └────────┬─────────┘
-                         │ TCP
-                ┌────────▼─────────┐
-                │  PostgreSQL 15   │  ← DB container
-                │  - users tablosu │
-                │  - kalıcı volume │
-                └──────────────────┘
+┌──────────────────────────────────────────────────┐
+│                Kullanıcı (Tarayıcı)               │
+└─────────────────────────┬────────────────────────┘
+                          │
+                 ┌────────▼─────────┐
+                 │  Nginx (Port 80) │   Frontend container
+                 │  React SPA       │
+                 │  • Stepper Form  │
+                 │  • SHAP Grafiği  │
+                 │  • Karanlık Tema │
+                 │  • i18n TR/EN    │
+                 └────────┬─────────┘
+                          │ HTTP (CORS)
+                 ┌────────▼─────────┐
+                 │  FastAPI (8000)  │   Backend container
+                 │  • XGBoost+SHAP  │
+                 │  • Rate Limit    │
+                 │  • BackgroundTask│
+                 │  • SQLAlchemy    │
+                 └────────┬─────────┘
+                          │ TCP
+                 ┌────────▼─────────┐
+                 │  PostgreSQL 15   │   Database container
+                 │  • Kalıcı volume │
+                 └──────────────────┘
 ```
 
 ---
@@ -347,47 +301,52 @@ curl -X POST http://localhost:8000/api/analyze \
 
 | Özellik | Açıklama |
 |---|---|
-| **LLM Destekli Tavsiye Motoru** | Kural tabanlı mesajların yerine GPT-4o / Claude ile kişiye özel konuşma tarzında finansal danışmanlık |
+| **LLM Destekli Tavsiye Motoru** | Kural tabanlı mesajların yerine büyük dil modeli ile kişiye özel, konuşma tarzında finansal danışmanlık |
 | **Belge OCR + AI** | Maaş bordrosu/vergi levhası yükleme → AI ile otomatik gelir doğrulama |
 | **Zaman Serisi Risk Takibi** | Aylık analizlerin geçmişi → gelir/borç trend grafiği |
-| **Çoklu Model Ensemble** | XGBoost + LightGBM + CatBoost stacking ile %99+ doğruluk hedefi |
-| **What-If Senaryoları** | "Borcumu %30 azaltırsam skor ne olur?" interaktif simülatör |
-| **Sesli Asistan** | Whisper STT + GPT TTS ile sesli soru-cevap arayüzü |
+| **Çoklu Model Ensemble** | XGBoost + LightGBM + CatBoost birleşimi ile daha yüksek doğruluk |
+| **Senaryo Simülatörü** | "Borcumu %30 azaltırsam skor ne olur?" interaktif analiz |
 
 #### Çözülebilecek Kullanıcı Problemleri
 
-- **Finansal Okuryazarlık** — Eğitici video serisi, etkileşimli quiz'ler ile kullanıcıyı eğitme
+- **Finansal Okuryazarlık** — Eğitici video serisi ve etkileşimli testlerle kullanıcıyı bilinçlendirme
 - **Erişilebilirlik** — WCAG 2.1 AA standardına geçiş, ekran okuyucu uyumluluğu
-- **Banka API Entegrasyonu** — Open Banking (BDDK onaylı) ile gerçek banka verisinden otomatik gelir/borç çekme
-- **Mobil Uygulama** — React Native ile iOS/Android native uygulamalar (web kodu paylaşımıyla)
+- **Banka API Entegrasyonu** — Open Banking ile gerçek banka verisinden otomatik gelir/borç çekme
+- **Mobil Uygulama** — React Native ile iOS/Android native uygulamalar
 
 #### Ölçeklenebilirlik Yol Haritası
 
-Mevcut Docker Compose mimarisi tek sunucu için optimize edilmiştir. Gerçek üretim ölçeği için:
+Mevcut Docker Compose mimarisi tek sunucu için optimize edilmiştir. Gerçek üretim ölçeği için önerilen mimari:
 
 ```
 Kullanıcı
    ↓
-CDN (Cloudflare) → Vercel (React SPA)
+CDN (Cloudflare) → React SPA (Vercel)
    ↓
-AWS ALB (Load Balancer)
+Load Balancer
    ↓
-ECS / Kubernetes → FastAPI cluster (3+ instance, auto-scaling)
+Kubernetes → FastAPI cluster (3+ instance, otomatik ölçekleme)
    ↓
-RDS PostgreSQL Multi-AZ + Redis ElastiCache (oturum + cache)
+PostgreSQL (Multi-AZ) + Redis (önbellek + oturum)
    ↓
-ML Inference Service (ayrı SageMaker endpoint, GPU destekli)
-   ↓
-S3 (PDF arşivi, model artifact'ları) + CloudWatch (loglar, metrikler)
+ML Inference Servisi (ayrı GPU destekli endpoint)
 ```
 
-**Beklenen Ölçek:** 100.000 aktif kullanıcı, günde 50.000+ analiz, p95 latency < 300ms.
+**Hedef Ölçek:** 100.000 aktif kullanıcı, günde 50.000+ analiz, p95 gecikme < 300ms.
 
 ---
 
 ## 🇬🇧 English
 
 > An academic portfolio project built end-to-end with Explainable AI (XAI), a persistent PostgreSQL data layer, Docker container architecture, and full bilingual support.
+
+### Table of Contents
+
+- [Project Overview](#project-overview)
+- [AI Tools Used](#ai-tools-used)
+- [Prompt Library](#prompt-library)
+- [Installation & Running](#installation--running)
+- [Future Vision](#future-vision)
 
 ---
 
@@ -403,29 +362,29 @@ In Turkey, millions of credit applications are submitted every year, yet a signi
 
 Traditional credit evaluation processes are opaque and inaccessible to end users. KrediZeka tackles this in four steps:
 
-1. **Instant Risk Score** — A 0-100 approval probability is generated based on income, debt, requested loan amount, age, credit history, and savings.
+1. **Instant Risk Score** — A 0-100 approval probability based on income, debt, requested loan amount, age, credit history, and savings.
 2. **Explainable AI (XAI)** — SHAP TreeExplainer transparently shows *why* each score was produced and which factors had positive/negative impact.
-3. **Financial Ratio Analysis** — DTI (Debt-to-Income) and LTI (Loan-to-Income) ratios are compared to industry benchmarks.
+3. **Financial Ratio Analysis** — DTI (Debt-to-Income) and LTI (Loan-to-Income) ratios compared to industry benchmarks.
 4. **Personalized Recommendation** — A rule-based engine provides advice tailored to the user's profile.
 
 #### Highlight Features
 
 | Feature | Description |
 |---|---|
-| **XGBoost ML Model** | Gradient boosting model with GridSearchCV hyperparameter tuning, 98%+ accuracy |
-| **SHAP Explainability** | Top 5 most influential factors visualized via horizontal bar chart |
+| **XGBoost ML Model** | Gradient boosting model with GridSearchCV hyperparameter tuning, 98.75% accuracy |
+| **SHAP Explainability** | Most influential factors per prediction, visualized via horizontal bar chart |
+| **Step-by-Step Analysis** | 3-stage wizard form: Personal Profile → Financial Data → Result |
 | **PostgreSQL + SQLAlchemy** | Production-grade persistent data layer (SQLite fallback for local dev) |
-| **Docker Compose** | 3 services (db / backend / frontend) start with a single command |
-| **Rate Limiting** | IP-based brute-force protection via `slowapi` (login: 5/min, analyze: 10/min) |
-| **Background Tasks** | Async email simulation via FastAPI BackgroundTasks — user is never blocked |
-| **JWT-Ready RBAC** | `is_admin` role with admin panel and `X-User-TC` header-based authorization guard |
-| **Multi-Language (i18n)** | Full TR/EN translation with react-i18next, localStorage caching |
-| **Dark Mode** | Tailwind class-based dark theme, Sun/Moon toggle, system preference detection |
-| **Stepper Form** | 3-step wizard for risk analysis (personal → financial → result) |
-| **PDF Export** | High-resolution A4 report download via html2canvas + jsPDF |
-| **Recharts Visualizations** | Pie chart (financial breakdown) + horizontal bar chart (SHAP impact) |
-| **Bcrypt Encryption** | Passwords stored as salted hashes; never plaintext |
-| **Profile Picture Upload** | Base64 upload with size/format validation |
+| **Docker Compose** | 3 services (database / backend / frontend) start with a single command |
+| **Rate Limiting** | IP-based brute-force protection on auth and analysis endpoints |
+| **Async Operations** | Email notifications via FastAPI BackgroundTasks — user is never blocked |
+| **Role-Based Access** | Admin dashboard and RBAC architecture with `is_admin` role |
+| **Multi-Language (i18n)** | Full Turkish/English translation with react-i18next, preference persistence |
+| **Dark Mode** | Tailwind class-based dark theme with system preference detection |
+| **PDF Report** | Download analysis result as a high-resolution A4 document |
+| **Data Visualization** | Pie chart and SHAP impact chart via Recharts |
+| **Secure Authentication** | Bcrypt salted hashing; passwords never stored as plaintext |
+| **Profile Management** | Profile picture upload, occupation and address updates |
 
 ---
 
@@ -438,13 +397,13 @@ While building this project, I leveraged the following AI tools to boost product
 - **GitHub Copilot** — Used inside VS Code for inline suggestions and docstring completion.
 
 #### UI Design
-- **Claude (Anthropic)** — Used to generate component scaffolds with Tailwind utility classes. I made the color palette, typography, and layout decisions myself, with Findeks and modern Turkish banking interfaces as references.
+- **Claude (Anthropic)** — Used to generate component scaffolds with Tailwind utility classes. I made the color palette, typography, and layout decisions myself, using modern Turkish banking interfaces as references.
 
 #### Data Generation
 - **Claude (Anthropic)** — Helped produce the synthetic financial dataset (German Credit Risk-style, 6,000 rows) used for model training. I validated the data distributions and labeling rules to ensure they aligned with sound financial logic.
 
 #### Content Generation
-- **Claude (Anthropic)** — Used to draft initial versions of KVKK-compliant legal texts (Privacy Policy, Terms of Use) and news/blog copy. All content was revised to fit the brand voice and academic project scope.
+- **Claude (Anthropic)** — Used to draft initial versions of KVKK-compliant legal texts (Privacy Policy, Terms of Use) and news copy. All content was revised to fit the brand voice and academic project scope.
 
 ---
 
@@ -462,31 +421,29 @@ features per prediction (positive/negative) as JSON. Run CPU-bound work in
 run_in_threadpool. Compute derived features (dti_ratio, lti_ratio) on the backend.
 ```
 
-**Backend — Rate Limiting + Background Tasks:**
+**Backend — Rate Limiting + Async Operations:**
 ```
-Integrate slowapi into FastAPI. Set a 5/minute IP limit on /api/login and
-/api/register. Return HTTP 429 when exceeded. Also fire an async email
-simulation via BackgroundTasks after a successful registration (just log to
-the terminal for now).
+Integrate slowapi into FastAPI. Set a per-minute IP request limit on the
+registration and login endpoints. Return HTTP 429 when exceeded. Also fire an
+async email notification service via BackgroundTasks after a successful sign-up.
 ```
 
 **Backend — SQLAlchemy + PostgreSQL Migration:**
 ```
 Migrate the existing SQLite backend to SQLAlchemy 2.0 + PostgreSQL. Put database.py
-and models.py in separate files. Read DATABASE_URL from env via pydantic-settings.
-Keep a SQLite fallback for backward compatibility. Provide ALTER TABLE migration
-for the legacy schema.
+and models.py in separate files. Read DATABASE_URL from an environment variable
+via pydantic-settings. Keep a SQLite fallback for backward compatibility.
 ```
 
-**Frontend — Stepper Wizard:**
+**Frontend — Stepper Wizard Form:**
 ```
 Build a 3-step (Personal / Financial / Result) horizontal stepper form with
 React + Tailwind. Validate each step before allowing Next. Completed steps
-show a green check, the active step is enlarged in primary color, upcoming
-steps are gray. Add smooth transitions and a Back button.
+show a green check, the active step is enlarged in primary color. Add smooth
+transitions and a Back button.
 ```
 
-**Frontend — Dark Mode Context:**
+**Frontend — Dark Theme Management:**
 ```
 Write a React Context for dark/light theme management. Initial priority:
 localStorage > prefers-color-scheme > 'light'. Toggle the 'dark' class on <html>
@@ -496,24 +453,24 @@ Tailwind class-based dark mode.
 
 #### Data Generation Prompts
 
-**Synthetic German Credit Risk Dataset:**
+**Synthetic Financial Dataset:**
 ```
 Use NumPy + Pandas to generate a 6000-row synthetic financial dataset. Columns:
 income (log-normal), debt (0-150% of income), loan_amount (log-normal),
 age (normal, 18-75), employment_years (depends on age), credit_history (0-5 beta),
 dependents (Poisson), savings_balance (log-normal). For the label, use a logistic
 function: positive factors (history, tenure, savings) and negative factors
-(DTI, LTI, dependents) determine the score. Target ~55% approval rate.
+(DTI, LTI, dependents) determine the score.
 ```
 
 #### UI Generation Prompts
 
-**Recharts Horizontal SHAP BarChart:**
+**Recharts Horizontal SHAP Chart:**
 ```
 Build a horizontal Recharts BarChart. Show the top 5 features by SHAP value.
-Positive values in emerald (#10b981), negative in red (#ef4444). Y-axis: feature
-name (translated label). X-axis: SHAP value. Tooltip format: "+0.420 → Positive
-Impact". CartesianGrid and text colors should adapt to dark mode automatically.
+Positive values in emerald, negative in red. Y-axis: feature name, X-axis:
+SHAP value. Tooltip format: "+0.420 → Positive Impact". Must be compatible
+with dark mode.
 ```
 
 #### Content Generation Prompts
@@ -523,7 +480,7 @@ Impact". CartesianGrid and text colors should adapt to dark mode automatically.
 Write a Turkish Privacy Policy compliant with KVKK (Law No. 6698) for KrediZeka.
 7 sections: Data Controller, Collected Data, Processing Purpose, Storage &
 Security, Third-Party Sharing, Cookie Policy, KVKK Article 11 Rights. Use
-realistic legal terminology. Produce both TR and EN versions.
+realistic legal terminology. Produce both Turkish and English versions.
 ```
 
 ---
@@ -541,7 +498,6 @@ cd kredizeka
 
 # 2. Prepare environment variables
 cp .env.example .env
-# (Optionally edit passwords in .env)
 
 # 3. Start all services
 docker compose up --build
@@ -550,10 +506,9 @@ docker compose up --build
 Access points:
 - **Frontend** → http://localhost
 - **Backend API** → http://localhost:8000
-- **Swagger Docs** → http://localhost:8000/docs
-- **PostgreSQL** → localhost:5432
+- **API Documentation (Swagger)** → http://localhost:8000/docs
 
-On first startup, the backend automatically trains the model (`loan_risk_pipeline.pkl`) and creates the database schema. Default admin account: `11111111111` / `admin123`.
+On first startup, the backend automatically creates the database schema. The default administrator account is automatically defined using the `DEFAULT_ADMIN_*` variables in the `.env` file.
 
 #### Method 2: Local Development (without Docker)
 
@@ -578,11 +533,10 @@ The frontend opens at `http://localhost:5173` and connects to the backend at `ht
 
 #### API Example
 
-**Risk Analysis:**
+**Risk Analysis Request:**
 ```bash
 curl -X POST http://localhost:8000/api/analyze \
   -H "Content-Type: application/json" \
-  -H "X-User-TC: 12345678901" \
   -d '{
     "income": 15000,
     "debt": 3000,
@@ -612,7 +566,6 @@ curl -X POST http://localhost:8000/api/analyze \
     }
   ],
   "model_meta": {
-    "version": "2.0",
     "algorithm": "XGBoost",
     "explainability": "SHAP TreeExplainer"
   }
@@ -622,24 +575,25 @@ curl -X POST http://localhost:8000/api/analyze \
 #### Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    User (Browser)                        │
-└────────────────────────┬────────────────────────────────┘
-                         │
-                ┌────────▼─────────┐
-                │  Nginx (Port 80) │  ← Frontend container
-                │  React SPA       │
-                └────────┬─────────┘
-                         │ HTTP (CORS)
-                ┌────────▼─────────┐
-                │  FastAPI (8000)  │  ← Backend container
-                │  XGBoost + SHAP  │
-                │  slowapi + BgTasks│
-                └────────┬─────────┘
-                         │ TCP
-                ┌────────▼─────────┐
-                │  PostgreSQL 15   │  ← DB container
-                └──────────────────┘
+┌──────────────────────────────────────────────────┐
+│                  User (Browser)                   │
+└─────────────────────────┬────────────────────────┘
+                          │
+                 ┌────────▼─────────┐
+                 │  Nginx (Port 80) │   Frontend container
+                 │  React SPA       │
+                 └────────┬─────────┘
+                          │ HTTP (CORS)
+                 ┌────────▼─────────┐
+                 │  FastAPI (8000)  │   Backend container
+                 │  XGBoost + SHAP  │
+                 │  Rate Limit      │
+                 │  BackgroundTasks │
+                 └────────┬─────────┘
+                          │ TCP
+                 ┌────────▼─────────┐
+                 │  PostgreSQL 15   │   Database container
+                 └──────────────────┘
 ```
 
 ---
@@ -650,64 +604,65 @@ curl -X POST http://localhost:8000/api/analyze \
 
 | Feature | Description |
 |---|---|
-| **LLM-Powered Advisor** | Replace rule-based messages with GPT-4o / Claude conversational financial guidance |
+| **LLM-Powered Advisor** | Replace rule-based messages with conversational financial guidance from a large language model |
 | **Document OCR + AI** | Upload payslip/tax document → automatic income verification with AI |
 | **Time-Series Risk Tracking** | Monthly analysis history → income/debt trend visualization |
-| **Multi-Model Ensemble** | XGBoost + LightGBM + CatBoost stacking targeting 99%+ accuracy |
-| **What-If Scenarios** | Interactive simulator: "What if I reduce my debt by 30%?" |
-| **Voice Assistant** | Whisper STT + GPT TTS for spoken Q&A interface |
+| **Multi-Model Ensemble** | Combine XGBoost + LightGBM + CatBoost for higher accuracy |
+| **Scenario Simulator** | Interactive analysis: "What if I reduce my debt by 30%?" |
 
 #### User Problems to Solve
 
 - **Financial Literacy** — Educational video series and interactive quizzes
 - **Accessibility** — Transition to WCAG 2.1 AA standard, screen reader compatibility
-- **Bank API Integration** — Open Banking (BDDK-approved) for automatic income/debt fetching
-- **Mobile App** — Native iOS/Android apps with React Native (sharing web code)
+- **Bank API Integration** — Open Banking for automatic income/debt fetching
+- **Mobile App** — Native iOS/Android apps with React Native
 
 #### Scalability Roadmap
 
-The current Docker Compose architecture is optimized for a single server. For production scale:
+The current Docker Compose architecture is optimized for a single server. The recommended architecture for production scale:
 
 ```
 User
   ↓
-CDN (Cloudflare) → Vercel (React SPA)
+CDN (Cloudflare) → React SPA (Vercel)
   ↓
-AWS ALB (Load Balancer)
+Load Balancer
   ↓
-ECS / Kubernetes → FastAPI cluster (3+ instances, auto-scaling)
+Kubernetes → FastAPI cluster (3+ instances, auto-scaling)
   ↓
-RDS PostgreSQL Multi-AZ + Redis ElastiCache (session + cache)
+PostgreSQL (Multi-AZ) + Redis (cache + session)
   ↓
-ML Inference Service (separate SageMaker endpoint, GPU-backed)
-  ↓
-S3 (PDF archive, model artifacts) + CloudWatch (logs, metrics)
+ML Inference Service (separate GPU-backed endpoint)
 ```
 
 **Target Scale:** 100,000 active users, 50,000+ analyses per day, p95 latency < 300ms.
 
 ---
 
-## 🔒 Security
+## 🔒 Güvenlik / Security
 
-- **Bcrypt** — Passwords are never stored in plaintext; unique salt per record
-- **Parameterized Queries** — Protected against SQL injection via SQLAlchemy ORM
-- **Pydantic Validation** — TC No must be digits-only and cannot start with 0
-- **Rate Limiting** — IP-based limits prevent brute-force on auth endpoints
-- **ProtectedRoute + AdminRoute** — Frontend route guards (`is_admin` check)
-- **CORS** — Configurable via `CORS_ORIGINS` environment variable
+- **Bcrypt** — Parolalar tuzlu hash olarak saklanır, asla düz metin / Passwords stored as salted hashes, never plaintext
+- **Parameterized Queries** — SQLAlchemy ORM ile SQL enjeksiyonuna karşı koruma / Protected against SQL injection
+- **Pydantic Doğrulama** — Tüm API girdileri tip ve format doğrulamasından geçer / All API inputs are type and format validated
+- **Rate Limiting** — IP tabanlı brute-force koruması / IP-based brute-force protection
+- **RBAC** — Rol tabanlı erişim kontrolü (`ProtectedRoute` + `AdminRoute`) / Role-based access control
+- **CORS** — `CORS_ORIGINS` ortam değişkeni ile yapılandırılabilir / Configurable via environment variable
 
 ---
 
-## 📄 License
+## 📄 Lisans / License
 
-MIT — see [LICENSE](LICENSE).
+Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır. / Licensed under the [MIT License](LICENSE).
+
+> **Yasal Uyarı:** Bu proje yalnızca eğitim, akademik portföy ve teknoloji simülasyonu amacıyla geliştirilmiştir. Sitedeki veriler, haberler ve analiz sonuçları gerçek dışıdır; finansal tavsiye niteliği taşımaz.
+>
+> **Disclaimer:** This project was developed solely for educational, academic portfolio, and technology simulation purposes. The data, news, and analysis results are fictional and do not constitute financial advice.
 
 ---
 
 <div align="center">
 
-**KrediZeka** — Make informed financial decisions with the power of AI.
 **KrediZeka** — Finansal kararlarınızda yapay zekânın gücünden yararlanın.
+**KrediZeka** — Make informed financial decisions with the power of AI.
 
 </div>

@@ -16,7 +16,7 @@ Bu sürümle birlikte:
 
 import os
 from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 import bcrypt
 import joblib
@@ -37,9 +37,12 @@ from slowapi.errors import RateLimitExceeded
 
 from config import settings
 from database import engine, SessionLocal, Base, get_db
-from models import User
+from models import User, BireyselAnalytics, TicariAnalytics, UrunlerAnalytics
 from services.email_service import (
     send_welcome_email, send_analysis_report_email, send_login_notification
+)
+from services.finance_engines import (
+    compute_bireysel_analysis, compute_ticari_analysis, compute_urun_analysis
 )
 
 
@@ -202,6 +205,45 @@ class AnalyzeRequest(BaseModel):
     credit_history: Optional[int] = Field(3, ge=0, le=5, description="Kredi geçmişi puanı (0-5)")
     dependents: Optional[int] = Field(1, ge=0, le=10, description="Bakmakla yükümlü sayısı")
     savings_balance: Optional[float] = Field(0, ge=0, description="Birikim hesabı bakiyesi (TL)")
+
+
+class BireyselAnalyzeRequest(BaseModel):
+    """
+    Bireysel hizmet analizi isteği.
+
+    tc_no          : Analizi yapan kullanıcının T.C. No'su (FK)
+    hizmet_turu    : Kredi_Yonetimi | Birikim | Kredi_Karti | Yatirim | Sigorta
+    girdi_verileri : Karta özel form verileri (serbest yapılı JSON)
+    """
+    tc_no: str = Field(..., min_length=11, max_length=11)
+    hizmet_turu: str = Field(..., description="Bireysel hizmet türü")
+    girdi_verileri: Dict[str, Any] = Field(..., description="Form verileri (JSON)")
+
+
+class TicariAnalyzeRequest(BaseModel):
+    """
+    Ticari hizmet analizi isteği.
+
+    tc_no          : Analizi yapan kullanıcının T.C. No'su (FK)
+    hizmet_turu    : Ticari_Kredi | POS_Tahsilat | Maas_Bordro | Dis_Ticaret
+    girdi_verileri : Şirket form verileri (serbest yapılı JSON)
+    """
+    tc_no: str = Field(..., min_length=11, max_length=11)
+    hizmet_turu: str = Field(..., description="Ticari hizmet türü")
+    girdi_verileri: Dict[str, Any] = Field(..., description="Şirket form verileri (JSON)")
+
+
+class UrunAnalyzeRequest(BaseModel):
+    """
+    Ürün analizi isteği.
+
+    tc_no          : Analizi yapan kullanıcının T.C. No'su (FK)
+    urun_turu      : Mevduat_Hesabi | Sigorta_Urunleri | Kampanyalar
+    girdi_verileri : Ürün form verileri (serbest yapılı JSON)
+    """
+    tc_no: str = Field(..., min_length=11, max_length=11)
+    urun_turu: str = Field(..., description="Ürün türü")
+    girdi_verileri: Dict[str, Any] = Field(..., description="Ürün form verileri (JSON)")
 
 
 # =============================================================================
@@ -593,6 +635,230 @@ async def analyze_risk(
             "algorithm": "XGBoost",
             "explainability": "SHAP TreeExplainer",
         },
+    }
+
+
+# =============================================================================
+# İNTERAKTİF MODÜL ENDPOINT'LERİ (Bireysel / Ticari / Ürünler)
+# =============================================================================
+# Bu uç noktalar, finance_engines.py içindeki simülasyon motorlarını çalıştırır
+# ve sonuçları ilgili PostgreSQL analytics tablosuna kaydeder.
+#
+# Ortak güvenlik: Her istek, geçerli bir kullanıcıya (tc_no) ait olmalıdır.
+# Kullanıcı bulunamazsa 404 döner — frontend zaten oturum guard'ı uygular.
+
+
+def _ensure_user_exists(tc_no: str, db: Session) -> User:
+    """
+    Verilen T.C. No'ya ait kullanıcıyı döndürür; yoksa 404 fırlatır.
+    İnteraktif modül endpoint'leri için ortak kullanıcı doğrulaması.
+    """
+    user = db.query(User).filter(User.tc_no == tc_no).first()
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="Bu işlem için geçerli bir kullanıcı oturumu gereklidir."
+        )
+    return user
+
+
+# ─── 6) BİREYSEL HİZMET ANALİZİ ────────────────────────────────────────────
+@app.post("/api/bireysel/analyze")
+@limiter.limit(settings.analyze_rate_limit)
+async def bireysel_analyze(
+    request: Request,
+    req: BireyselAnalyzeRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    Bireysel sekmesindeki hizmet kartlarının analiz motorunu çalıştırır.
+
+    Desteklenen hizmet_turu değerleri:
+      Kredi_Yonetimi | Birikim | Kredi_Karti | Yatirim | Sigorta
+
+    İşleyiş:
+      1. Kullanıcı doğrulanır (tc_no)
+      2. finance_engines.compute_bireysel_analysis() çağrılır
+      3. Sonuç bireysel_analytics tablosuna JSONB olarak kaydedilir
+      4. Hesaplama sonucu + AI tavsiyesi JSON olarak döndürülür
+
+    Rate limit: settings.analyze_rate_limit (IP başına)
+    """
+    user = _ensure_user_exists(req.tc_no, db)
+
+    # Simülasyon motorunu çalıştır (geçersiz hizmet türü ValueError fırlatır)
+    try:
+        result = await run_in_threadpool(
+            compute_bireysel_analysis, req.hizmet_turu, req.girdi_verileri
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Sonucu PostgreSQL bireysel_analytics tablosuna kaydet
+    kayit = BireyselAnalytics(
+        tc_no=req.tc_no,
+        hizmet_turu=req.hizmet_turu,
+        girdi_verileri=req.girdi_verileri,
+        hesaplanan_skor=float(result.get("score", 0.0)),
+        yapay_zeka_tavsiyesi=result.get("ai_advice", ""),
+    )
+    db.add(kayit)
+    db.commit()
+    db.refresh(kayit)
+
+    # Asenkron bilgilendirme e-postası (kullanıcı bekletilmez)
+    background_tasks.add_task(
+        send_analysis_report_email, user.tc_no, user.full_name,
+        int(result.get("score", 0))
+    )
+
+    return {
+        "success": True,
+        "kayit_id": kayit.id,
+        "hizmet_turu": req.hizmet_turu,
+        "result": result,
+        "created_at": kayit.created_at.isoformat(),
+    }
+
+
+# ─── 7) TİCARİ HİZMET ANALİZİ ──────────────────────────────────────────────
+@app.post("/api/ticari/analyze")
+@limiter.limit(settings.analyze_rate_limit)
+async def ticari_analyze(
+    request: Request,
+    req: TicariAnalyzeRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    Ticari sekmesindeki hizmet kartlarının analiz motorunu çalıştırır.
+
+    Desteklenen hizmet_turu değerleri:
+      Ticari_Kredi | POS_Tahsilat | Maas_Bordro | Dis_Ticaret
+
+    İşleyiş:
+      1. Kullanıcı doğrulanır (tc_no)
+      2. finance_engines.compute_ticari_analysis() — XGBoost mantığıyla
+         "Şirket Finansal Sağlık Skoru" hesaplar
+      3. Sonuç ticari_analytics tablosuna JSONB olarak kaydedilir
+      4. Skor + risk durumu + AI tavsiyesi JSON olarak döndürülür
+
+    Rate limit: settings.analyze_rate_limit (IP başına)
+    """
+    user = _ensure_user_exists(req.tc_no, db)
+
+    try:
+        result = await run_in_threadpool(
+            compute_ticari_analysis, req.hizmet_turu, req.girdi_verileri
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    kayit = TicariAnalytics(
+        tc_no=req.tc_no,
+        hizmet_turu=req.hizmet_turu,
+        girdi_verileri=req.girdi_verileri,
+        sirket_saglik_skoru=float(result.get("sirket_saglik_skoru", 0.0)),
+        yapay_zeka_tavsiyesi=result.get("ai_advice", ""),
+    )
+    db.add(kayit)
+    db.commit()
+    db.refresh(kayit)
+
+    background_tasks.add_task(
+        send_analysis_report_email, user.tc_no, user.full_name,
+        int(result.get("sirket_saglik_skoru", 0))
+    )
+
+    return {
+        "success": True,
+        "kayit_id": kayit.id,
+        "hizmet_turu": req.hizmet_turu,
+        "result": result,
+        "created_at": kayit.created_at.isoformat(),
+    }
+
+
+# ─── 8) ÜRÜN ANALİZİ ───────────────────────────────────────────────────────
+@app.post("/api/urunler/analyze")
+@limiter.limit(settings.analyze_rate_limit)
+async def urunler_analyze(
+    request: Request,
+    req: UrunAnalyzeRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    Ürünler sekmesindeki kartların analiz motorunu çalıştırır.
+
+    Desteklenen urun_turu değerleri:
+      Mevduat_Hesabi | Sigorta_Urunleri | Kampanyalar
+
+    İşleyiş:
+      1. Kullanıcı doğrulanır (tc_no)
+      2. finance_engines.compute_urun_analysis() — Linear Regression
+         mantığıyla kurgusal getiri/prim tahmini hesaplar
+      3. Sonuç urunler_analytics tablosuna JSONB olarak kaydedilir
+      4. Tahmin + AI tavsiyesi JSON olarak döndürülür
+
+    Rate limit: settings.analyze_rate_limit (IP başına)
+    """
+    _ensure_user_exists(req.tc_no, db)
+
+    try:
+        result = await run_in_threadpool(
+            compute_urun_analysis, req.urun_turu, req.girdi_verileri
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    kayit = UrunlerAnalytics(
+        tc_no=req.tc_no,
+        urun_turu=req.urun_turu,
+        girdi_verileri=req.girdi_verileri,
+        tahmin_edilen_getiri_veya_prim=float(result.get("tahmin", 0.0)),
+        yapay_zeka_tavsiyesi=result.get("ai_advice", ""),
+    )
+    db.add(kayit)
+    db.commit()
+    db.refresh(kayit)
+
+    return {
+        "success": True,
+        "kayit_id": kayit.id,
+        "urun_turu": req.urun_turu,
+        "result": result,
+        "created_at": kayit.created_at.isoformat(),
+    }
+
+
+# ─── 9) KULLANICININ ANALİZ GEÇMİŞİ ────────────────────────────────────────
+@app.get("/api/analytics/history/{tc_no}")
+async def analytics_history(tc_no: str, db: Session = Depends(get_db)):
+    """
+    Bir kullanıcının tüm interaktif modül analiz geçmişini döndürür.
+    Bireysel, ticari ve ürün analizlerini tek yanıtta birleştirir.
+    """
+    _ensure_user_exists(tc_no, db)
+
+    bireysel = db.query(BireyselAnalytics).filter(
+        BireyselAnalytics.tc_no == tc_no
+    ).order_by(BireyselAnalytics.id.desc()).limit(20).all()
+
+    ticari = db.query(TicariAnalytics).filter(
+        TicariAnalytics.tc_no == tc_no
+    ).order_by(TicariAnalytics.id.desc()).limit(20).all()
+
+    urunler = db.query(UrunlerAnalytics).filter(
+        UrunlerAnalytics.tc_no == tc_no
+    ).order_by(UrunlerAnalytics.id.desc()).limit(20).all()
+
+    return {
+        "bireysel": [k.to_dict() for k in bireysel],
+        "ticari": [k.to_dict() for k in ticari],
+        "urunler": [k.to_dict() for k in urunler],
+        "toplam_analiz": len(bireysel) + len(ticari) + len(urunler),
     }
 
 

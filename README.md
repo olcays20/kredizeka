@@ -65,7 +65,8 @@ Geleneksel kredi değerlendirme süreçleri opak ve kullanıcıya kapalıdır. K
 | **XGBoost ML Modeli** | GridSearchCV ile hiperparametre optimize edilmiş, %98.75 doğruluğa sahip gradient boosting modeli |
 | **SHAP Açıklanabilirlik** | Her tahminin arkasındaki en etkili faktörleri yatay bar grafikle gösterir |
 | **Adımlı Risk Analizi** | 3 aşamalı sihirbaz form: Kişisel Durum → Finansal Veriler → Sonuç |
-| **PostgreSQL + SQLAlchemy** | Üretim seviyesinde kalıcı veri katmanı (SQLite fallback ile yerel test desteği) |
+| **İnteraktif Finansal Modüller** | Bireysel, Ticari ve Ürünler sekmelerinde 12 ayrı simülasyon motoru (Kredi Yönetimi, Birikim, Yatırım, Şirket Sağlık Skoru, Mevduat, Sigorta vb.) |
+| **PostgreSQL + SQLAlchemy** | İlişkisel veri katmanı: `users` + 3 analiz tablosu (1-N ilişkiler, JSONB sütunlar) |
 | **Docker Compose** | 3 servis (veritabanı / backend / frontend) tek komutla ayağa kalkar |
 | **Rate Limiting** | IP tabanlı brute-force koruması (kayıt/giriş ve analiz uç noktalarında) |
 | **Asenkron İşlemler** | FastAPI BackgroundTasks ile e-posta bildirimleri — kullanıcı bekletilmez |
@@ -73,9 +74,58 @@ Geleneksel kredi değerlendirme süreçleri opak ve kullanıcıya kapalıdır. K
 | **Çoklu Dil (i18n)** | react-i18next ile tam Türkçe/İngilizce çeviri, tercih kaydı |
 | **Karanlık Tema** | Tailwind class-based dark mode, sistem tercihi algılama |
 | **PDF Rapor** | Analiz sonucunu yüksek çözünürlüklü A4 belge olarak indirme |
-| **Veri Görselleştirme** | Recharts ile pasta grafiği ve SHAP etki grafiği |
+| **Veri Görselleştirme** | Recharts ile pasta grafiği, bar grafiği ve SHAP etki grafiği |
 | **Güvenli Kimlik Doğrulama** | Bcrypt ile tuzlu hash; parolalar asla düz metin saklanmaz |
 | **Profil Yönetimi** | Profil fotoğrafı yükleme, meslek ve adres güncelleme |
+
+#### İnteraktif Finansal Modül Mimarisi
+
+"Bireysel", "Ticari" ve "Ürünler" sekmelerindeki tüm hizmet kartları statik
+görseller değil, arkasında gerçek veri modelleri ve simülasyon motorları
+çalışan interaktif modüllerdir. Her kart tıklandığında çok adımlı bir
+analiz formu açılır; sonuçlar PostgreSQL'e kaydedilir ve grafiklerle
+görselleştirilir.
+
+> ⚠️ **Akademik Proje Notu:** Bu modüller gerçek banka veya resmi kurum
+> API'leri **kullanmaz**. Tamamen eğitim ve portföy amaçlı, deterministik
+> ve şeffaf finansal formüllere dayanan kurgusal (mock) simülasyonlardır.
+
+| Modül | API Endpoint | Simülasyon Motoru | Çıktı |
+|---|---|---|---|
+| **Bireysel** (5 hizmet) | `POST /api/bireysel/analyze` | Borç/gelir analizi, bileşik faiz, portföy projeksiyonu | 0–100 skor + grafik |
+| **Ticari** (4 hizmet) | `POST /api/ticari/analyze` | XGBoost mantığıyla **Şirket Finansal Sağlık Skoru** | 0–100 skor + risk durumu |
+| **Ürünler** (3 ürün) | `POST /api/urunler/analyze` | **Linear Regression** ile getiri/prim tahmini | Tahmini tutar + grafik |
+| **Geçmiş** | `GET /api/analytics/history/{tc_no}` | Tüm modül analiz geçmişi | Birleşik liste |
+
+#### PostgreSQL İlişkisel Şema
+
+```
+┌────────────────────┐
+│       users        │  (PK: id, UNIQUE: tc_no)
+│  - tc_no           │
+│  - full_name       │
+│  - is_admin        │
+└─────────┬──────────┘
+          │ 1
+          │
+   ┌──────┼──────────────────┬──────────────────┐
+   │ N    │ N                │ N                │
+┌──▼───────────────┐ ┌───────▼──────────┐ ┌─────▼────────────┐
+│ bireysel_        │ │ ticari_          │ │ urunler_         │
+│   analytics      │ │   analytics      │ │   analytics      │
+│ - hizmet_turu    │ │ - hizmet_turu    │ │ - urun_turu      │
+│ - girdi_verileri │ │ - girdi_verileri │ │ - girdi_verileri │
+│   (JSONB)        │ │   (JSONB)        │ │   (JSONB)        │
+│ - hesaplanan_    │ │ - sirket_saglik_ │ │ - tahmin_edilen_ │
+│   skor           │ │   skoru          │ │   getiri/prim    │
+│ - FK: tc_no      │ │ - FK: tc_no      │ │ - FK: tc_no      │
+└──────────────────┘ └──────────────────┘ └──────────────────┘
+```
+
+Her analiz tablosu `users.tc_no`'ya **Foreign Key** ile bağlıdır
+(`ON DELETE CASCADE`). Kullanıcının form verileri **JSONB** sütununda
+yarı-yapılı (semi-structured) biçimde saklanır — bu sayede her hizmet
+türü kendi alan setine sahip olabilir.
 
 ---
 
@@ -374,7 +424,8 @@ Traditional credit evaluation processes are opaque and inaccessible to end users
 | **XGBoost ML Model** | Gradient boosting model with GridSearchCV hyperparameter tuning, 98.75% accuracy |
 | **SHAP Explainability** | Most influential factors per prediction, visualized via horizontal bar chart |
 | **Step-by-Step Analysis** | 3-stage wizard form: Personal Profile → Financial Data → Result |
-| **PostgreSQL + SQLAlchemy** | Production-grade persistent data layer (SQLite fallback for local dev) |
+| **Interactive Financial Modules** | 12 distinct simulation engines across Personal, Commercial & Products tabs (Loan Management, Savings, Investment, Company Health Score, Deposit, Insurance, etc.) |
+| **PostgreSQL + SQLAlchemy** | Relational data layer: `users` + 3 analytics tables (1-N relations, JSONB columns) |
 | **Docker Compose** | 3 services (database / backend / frontend) start with a single command |
 | **Rate Limiting** | IP-based brute-force protection on auth and analysis endpoints |
 | **Async Operations** | Email notifications via FastAPI BackgroundTasks — user is never blocked |
@@ -382,9 +433,52 @@ Traditional credit evaluation processes are opaque and inaccessible to end users
 | **Multi-Language (i18n)** | Full Turkish/English translation with react-i18next, preference persistence |
 | **Dark Mode** | Tailwind class-based dark theme with system preference detection |
 | **PDF Report** | Download analysis result as a high-resolution A4 document |
-| **Data Visualization** | Pie chart and SHAP impact chart via Recharts |
+| **Data Visualization** | Pie chart, bar chart, and SHAP impact chart via Recharts |
 | **Secure Authentication** | Bcrypt salted hashing; passwords never stored as plaintext |
 | **Profile Management** | Profile picture upload, occupation and address updates |
+
+#### Interactive Financial Module Architecture
+
+All service cards in the "Personal", "Commercial", and "Products" tabs are not
+static graphics — they are interactive modules backed by real data models and
+simulation engines. Clicking a card opens a multi-step analysis form; results
+are persisted to PostgreSQL and visualized with charts.
+
+> ⚠️ **Academic Project Note:** These modules **do not** use real bank or
+> official institution APIs. They are entirely fictional (mock) simulations
+> based on deterministic, transparent financial formulas for educational and
+> portfolio purposes.
+
+| Module | API Endpoint | Simulation Engine | Output |
+|---|---|---|---|
+| **Personal** (5 services) | `POST /api/bireysel/analyze` | Debt/income analysis, compound interest, portfolio projection | 0–100 score + chart |
+| **Commercial** (4 services) | `POST /api/ticari/analyze` | XGBoost-style **Company Financial Health Score** | 0–100 score + risk status |
+| **Products** (3 products) | `POST /api/urunler/analyze` | **Linear Regression** for return/premium estimation | Estimated amount + chart |
+| **History** | `GET /api/analytics/history/{tc_no}` | All module analysis history | Combined list |
+
+#### PostgreSQL Relational Schema
+
+```
+┌────────────────────┐
+│       users        │  (PK: id, UNIQUE: tc_no)
+└─────────┬──────────┘
+          │ 1
+   ┌──────┼──────────────────┬──────────────────┐
+   │ N    │ N                │ N                │
+┌──▼───────────────┐ ┌───────▼──────────┐ ┌─────▼────────────┐
+│ bireysel_        │ │ ticari_          │ │ urunler_         │
+│   analytics      │ │   analytics      │ │   analytics      │
+│ - hizmet_turu    │ │ - hizmet_turu    │ │ - urun_turu      │
+│ - girdi_verileri │ │ - girdi_verileri │ │ - girdi_verileri │
+│   (JSONB)        │ │   (JSONB)        │ │   (JSONB)        │
+│ - FK: tc_no      │ │ - FK: tc_no      │ │ - FK: tc_no      │
+└──────────────────┘ └──────────────────┘ └──────────────────┘
+```
+
+Each analytics table is linked to `users.tc_no` via a **Foreign Key**
+(`ON DELETE CASCADE`). The user's form inputs are stored in a **JSONB**
+column in a semi-structured manner, allowing each service type to have its
+own field set.
 
 ---
 

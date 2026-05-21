@@ -6,8 +6,9 @@
 #
 # Servisler:
 #   1. db        → PostgreSQL 15 (kalıcı veri için named volume)
-#   2. backend   → FastAPI + Uvicorn (8000 portu)
-#   3. frontend  → Vite ile build edilmiş React, Nginx ile sunulur (80 portu)
+#   2. redis     → Redis 7 (in-memory önbellek — DB yükünü azaltır)
+#   3. backend   → FastAPI + Uvicorn (8000 portu)
+#   4. frontend  → Vite ile build edilmiş React, Nginx ile sunulur (80 portu)
 #
 # Network: Tüm servisler 'kredizeka-net' köprü ağı üzerinden konuşur.
 # =============================================================================
@@ -38,6 +39,26 @@ services:
     networks:
       - kredizeka-net
 
+  # ───────── Redis (Önbellek / Cache) ─────────
+  # Sık okunan veriler (ör. admin istatistikleri) Redis belleğinde tutulur.
+  # Böylece her istekte PostgreSQL'e gitmek yerine, milisaniyeler içinde
+  # bellekten yanıt verilir — veritabanı yükü ciddi biçimde azalır.
+  redis:
+    image: redis:alpine
+    container_name: kredizeka-redis
+    restart: unless-stopped
+    ports:
+      # Sadece host makineden erişim (geliştirme/debug amaçlı)
+      - "6379:6379"
+    healthcheck:
+      # Backend, Redis hazır olmadan başlamasın
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - kredizeka-net
+
   # ───────── Backend (FastAPI) ─────────
   backend:
     build:
@@ -49,6 +70,9 @@ services:
       # DATABASE_URL → SQLAlchemy bu URL ile bağlanır
       # Format: postgresql+psycopg2://user:pass@host:port/dbname
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-kredizeka}:${POSTGRES_PASSWORD:-kredizeka_pass}@db:5432/${POSTGRES_DB:-kredizeka_db}
+      # REDIS_URL → fastapi-cache2 bu adres üzerinden Redis'e bağlanır.
+      # 'redis' hostname'i, aynı Docker ağındaki redis servisini işaret eder.
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       # CORS için ön yüz adresi (üretimde domain'inizle değiştirin)
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
       # Varsayılan admin bilgileri (init_database'de oluşturulur)
@@ -56,6 +80,8 @@ services:
       DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-admin123}
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "8000:8000"

@@ -583,5 +583,12 @@
     "loading": "Loading...",
     "server_unreachable": "Could not connect to the server. Please check your internet connection.",
     "unexpected_error": "An unexpected error occurred."
+  },
+  "auth": {
+    "google_continue": "Continue with Google",
+    "google_connecting": "Connecting...",
+    "google_success": "Signed in with Google! Welcome, {{name}}.",
+    "google_error": "Could not sign in with Google.",
+    "divider_or": "or"
   }
 }

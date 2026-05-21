@@ -583,5 +583,12 @@
     "loading": "Yükleniyor...",
     "server_unreachable": "Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.",
     "unexpected_error": "Beklenmeyen bir hata oluştu."
+  },
+  "auth": {
+    "google_continue": "Google ile Devam Et",
+    "google_connecting": "Bağlanılıyor...",
+    "google_success": "Google ile giriş başarılı! Hoş geldiniz, {{name}}.",
+    "google_error": "Google ile giriş yapılamadı.",
+    "divider_or": "veya"
   }
 }

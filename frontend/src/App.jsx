@@ -22,6 +22,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { useAuth } from './hooks/useAuth';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import ZekaBot from './components/ZekaBot';
 
 // Performans Optimizasyonu: Code Splitting (Lazy Loading)
 // Sayfalar sadece kullanıcı o sayfaya gittiğinde indirilir, ilk yükleme çok hızlı olur.
@@ -120,6 +121,8 @@ function App() {
               </Suspense>
             </main>
             <Footer />
+            {/* ZekaBot — tüm sayfalarda sağ altta görünen yapay zeka asistanı */}
+            <ZekaBot />
           </div>
         </Router>
       </AuthProvider>

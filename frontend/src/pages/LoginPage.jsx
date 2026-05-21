@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { LogIn, CreditCard, Lock, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import GoogleLoginButton from '../components/GoogleLoginButton';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -102,7 +103,10 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-slate-200" />
           </div>
 
-          <p className="text-center text-sm text-slate-500">
+          {/* Google ile sosyal giriş (OAuth2 — mock) */}
+          <GoogleLoginButton />
+
+          <p className="text-center text-sm text-slate-500 mt-6">
             {t('login.no_account')}{' '}
             <Link to="/kayit" className="text-primary-600 font-semibold hover:underline">{t('login.register_link')}</Link>
           </p>

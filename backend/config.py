@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     # Virgülle ayrılmış origin listesi ("*" = hepsi)
     cors_origins: str = "*"
 
+    # ─── Redis (Önbellek) ────────────────────────────────────────────
+    # fastapi-cache2 bu adres üzerinden Redis'e bağlanır.
+    # Yerel geliştirmede localhost; Docker'da 'redis' servis adıdır.
+    # Redis erişilemezse uygulama otomatik olarak bellek-içi (in-memory)
+    # önbelleğe düşer — bu yüzden Redis olmadan da sistem çalışmaya devam eder.
+    redis_url: str = "redis://localhost:6379"
+
     # ─── ML Modeli ──────────────────────────────────────────────────
     model_path: str = "loan_risk_pipeline.pkl"
 
@@ -47,6 +54,8 @@ class Settings(BaseSettings):
     # slowapi için default rate limit (auth uç noktaları için dakikada N istek)
     auth_rate_limit: str = "5/minute"
     analyze_rate_limit: str = "10/minute"
+    # ZekaBot sohbet uç noktası için ayrı (daha cömert) limit
+    chat_rate_limit: str = "30/minute"
 
     # Pydantic Settings yapılandırması
     # protected_namespaces: Pydantic v2'de "model_" prefix'li alan isimleri

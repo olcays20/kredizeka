@@ -29,6 +29,8 @@ import ZekaBot from './components/ZekaBot';
 const RiskReportPage = lazy(() => import('./pages/RiskReportPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const BireyselPage = lazy(() => import('./pages/BireyselPage'));
 const TicariPage = lazy(() => import('./pages/TicariPage'));
@@ -97,6 +99,8 @@ function App() {
                 <Route path="/" element={<RiskReportPage />} />
                 <Route path="/kayit" element={<RegisterPage />} />
                 <Route path="/giris" element={<LoginPage />} />
+                <Route path="/sifremi-unuttum" element={<ForgotPasswordPage />} />
+                <Route path="/sifre-sifirla" element={<ResetPasswordPage />} />
                 <Route path="/profil" element={
                   <ProtectedRoute>
                     <ProfilePage />

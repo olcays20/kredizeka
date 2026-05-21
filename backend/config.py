@@ -56,6 +56,22 @@ class Settings(BaseSettings):
     # Kullanılacak Gemini modeli — hız/maliyet için 'flash' sürümü idealdir
     gemini_model: str = "gemini-2.5-flash"
 
+    # ─── Brevo (Şifre Sıfırlama E-postası) ──────────────────────────
+    # Brevo (eski adıyla Sendinblue) transactional e-posta servisidir.
+    # brevo_api_key TANIMLIYSA şifre sıfırlama e-postası GERÇEKTEN gönderilir;
+    # boşsa e-posta simüle edilir (sıfırlama linki sunucu log'una yazılır).
+    # GÜVENLİK: Anahtar yalnızca ortam değişkeniyle verilir, koda yazılmaz.
+    brevo_api_key: str = ""
+    # Brevo panelinde DOĞRULANMIŞ gönderen e-posta adresi (ör. kendi Gmail'in)
+    brevo_sender_email: str = ""
+    brevo_sender_name: str = "KrediZeka"
+
+    # ─── Frontend Adresi ────────────────────────────────────────────
+    # Şifre sıfırlama linki bu adres üzerinden oluşturulur:
+    #   {frontend_url}/sifre-sifirla?token=XXXX
+    # Yerelde Vite dev sunucusu; üretimde Vercel adresinizdir.
+    frontend_url: str = "http://localhost:5173"
+
     # ─── Varsayılan Admin ───────────────────────────────────────────
     # İlk başlatmada otomatik oluşturulur (sadece sistemde admin yoksa)
     default_admin_tc: str = "11111111111"

@@ -153,7 +153,8 @@
     "register_link": "Sign Up",
     "validation_tc": "T.C. ID Number must be 11 digits.",
     "validation_password": "Password must be at least 6 characters.",
-    "welcome_toast": "Welcome, {{name}}!"
+    "welcome_toast": "Welcome, {{name}}!",
+    "forgot_password_link": "Forgot password?"
   },
   "register": {
     "title": "Create Account",
@@ -180,6 +181,35 @@
     "validation_tc_zero": "T.C. ID Number cannot start with 0.",
     "validation_phone": "Phone number must be 11 digits.",
     "validation_password": "Password must be at least 6 characters."
+  },
+  "forgot_password": {
+    "title": "Forgot Password",
+    "subtitle": "Enter your email address and we'll send you a reset link.",
+    "email_label": "Email Address",
+    "email_placeholder": "example@email.com",
+    "submit": "Send Reset Link",
+    "submitting": "Sending...",
+    "validation_email": "Please enter a valid email address.",
+    "success_title": "Check Your Email",
+    "success_message": "If that address is registered, a password reset link has been sent. The link is valid for 1 hour.",
+    "back_to_login": "Back to login"
+  },
+  "reset_password": {
+    "title": "Set New Password",
+    "subtitle": "Create a new password for your account.",
+    "password_label": "New Password",
+    "password_placeholder": "At least 6 characters",
+    "confirm_label": "New Password (Confirm)",
+    "confirm_placeholder": "Re-enter your password",
+    "submit": "Update Password",
+    "submitting": "Updating...",
+    "validation_length": "Password must be at least 6 characters.",
+    "validation_match": "Passwords do not match.",
+    "invalid_title": "Invalid Link",
+    "missing_token": "The reset link is invalid or missing. Please request a new one.",
+    "request_new": "Request a New Link",
+    "success_toast": "Your password has been updated successfully! You can now log in.",
+    "back_to_login": "Back to login"
   },
   "profile": {
     "member_badge": "KrediZeka Member",

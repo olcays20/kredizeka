@@ -18,8 +18,9 @@ import os
 import re
 import asyncio
 import random
+import secrets
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 
 import bcrypt
@@ -58,9 +59,13 @@ from google.genai import types as genai_types
 
 from config import settings
 from database import engine, SessionLocal, Base, get_db
-from models import User, BireyselAnalytics, TicariAnalytics, UrunlerAnalytics
+from models import (
+    User, BireyselAnalytics, TicariAnalytics, UrunlerAnalytics,
+    PasswordResetToken
+)
 from services.email_service import (
-    send_welcome_email, send_analysis_report_email, send_login_notification
+    send_welcome_email, send_analysis_report_email, send_login_notification,
+    send_password_reset_email
 )
 from services.finance_engines import (
     compute_bireysel_analysis, compute_ticari_analysis, compute_urun_analysis
@@ -231,6 +236,27 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     tc_no: str = Field(..., min_length=11, max_length=11)
     password: str = Field(..., min_length=6)
+
+
+class ForgotPasswordRequest(BaseModel):
+    """
+    "Şifremi Unuttum" akışının ilk adımı — sıfırlama bağlantısı talebi.
+
+    email : Kullanıcının kayıtlı e-posta adresi. Bu adrese sıfırlama linki
+            gönderilir (kullanıcı varsa).
+    """
+    email: str = Field(..., min_length=5, max_length=255)
+
+
+class ResetPasswordRequest(BaseModel):
+    """
+    "Şifremi Unuttum" akışının ikinci adımı — yeni şifrenin belirlenmesi.
+
+    token        : E-postadaki sıfırlama linkinden gelen güvenli jeton.
+    new_password : Kullanıcının belirlediği yeni şifre (min. 6 karakter).
+    """
+    token: str = Field(..., min_length=10, max_length=255)
+    new_password: str = Field(..., min_length=6, max_length=100)
 
 
 class ProfileUpdateRequest(BaseModel):
@@ -553,6 +579,143 @@ async def login(
         "success": True,
         "message": f"Giriş başarılı! Hoş geldiniz {user.full_name}.",
         "user": user.to_dict(),
+    }
+
+
+# ─── ŞİFREMİ UNUTTUM (1/2): SIFIRLAMA BAĞLANTISI TALEBİ ────────────────────
+@app.post("/api/forgot-password")
+@limiter.limit(settings.auth_rate_limit)
+async def forgot_password(
+    request: Request,
+    req: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    Şifre sıfırlama akışını başlatır.
+
+    İşleyiş:
+      1. E-posta adresine sahip kullanıcı aranır.
+      2. Kullanıcı varsa: güvenli rastgele bir jeton üretilir, veritabanına
+         1 saat geçerli olacak şekilde kaydedilir ve e-postayla sıfırlama
+         linki gönderilir (arka planda — kullanıcı bekletilmez).
+      3. Aynı kullanıcının daha önceki kullanılmamış jetonları iptal edilir
+         (yalnızca en son gönderilen link geçerli kalır).
+
+    GÜVENLİK: E-posta kayıtlı olsa da olmasa da AYNI yanıt döner. Bu, saldırganın
+    hangi e-postaların sisteme kayıtlı olduğunu öğrenmesini (user enumeration)
+    engeller.
+
+    Rate limit: settings.auth_rate_limit
+    """
+    # Kayıt sırasında e-postalar küçük harfe normalize edilir; burada da uygula
+    email = req.email.strip().lower()
+
+    # Her durumda dönecek ortak yanıt (kayıtlı e-postaları sızdırmamak için)
+    generic_response = {
+        "success": True,
+        "message": "Eğer bu e-posta adresi sistemde kayıtlıysa, şifre sıfırlama "
+                   "bağlantısı gönderilmiştir. Lütfen gelen kutunuzu kontrol edin.",
+    }
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        # Kullanıcı yok — yine de başarı yanıtı dön (enumeration koruması)
+        return generic_response
+
+    # Bu kullanıcının önceki kullanılmamış jetonlarını iptal et
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.tc_no == user.tc_no,
+        PasswordResetToken.used.is_(False),
+    ).update({"used": True})
+
+    # Kriptografik olarak güvenli, benzersiz bir jeton üret
+    token = secrets.token_urlsafe(32)
+    reset_record = PasswordResetToken(
+        tc_no=user.tc_no,
+        token=token,
+        expires_at=datetime.utcnow() + timedelta(hours=1),
+        used=False,
+    )
+    db.add(reset_record)
+    db.commit()
+
+    # Sıfırlama linkini oluştur ve e-postayı arka planda gönder
+    reset_link = f"{settings.frontend_url.rstrip('/')}/sifre-sifirla?token={token}"
+    background_tasks.add_task(
+        send_password_reset_email, user.email, user.full_name, reset_link
+    )
+
+    return generic_response
+
+
+# ─── ŞİFREMİ UNUTTUM (2/2): YENİ ŞİFRENİN BELİRLENMESİ ─────────────────────
+@app.post("/api/reset-password")
+@limiter.limit(settings.auth_rate_limit)
+async def reset_password(
+    request: Request,
+    req: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Sıfırlama jetonunu doğrular ve kullanıcının şifresini günceller.
+
+    Jeton şu üç koşulun TAMAMINI sağlamalıdır:
+      1. Veritabanında var olmalı (geçerli bir jeton).
+      2. Daha önce kullanılmamış olmalı (tek kullanımlık güvenlik).
+      3. Süresi dolmamış olmalı (expires_at > şu an).
+
+    Hepsi sağlanırsa şifre yeniden hash'lenip kaydedilir ve jeton "kullanıldı"
+    olarak işaretlenir (aynı linkin ikinci kez kullanılması engellenir).
+
+    Rate limit: settings.auth_rate_limit
+    """
+    reset_record = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token == req.token
+    ).first()
+
+    # 1) Jeton veritabanında var mı?
+    if not reset_record:
+        raise HTTPException(
+            status_code=400,
+            detail="Geçersiz sıfırlama bağlantısı. Lütfen yeniden talep edin."
+        )
+
+    # 2) Jeton daha önce kullanılmış mı?
+    if reset_record.used:
+        raise HTTPException(
+            status_code=400,
+            detail="Bu sıfırlama bağlantısı zaten kullanılmış. "
+                   "Lütfen yeni bir bağlantı talep edin."
+        )
+
+    # 3) Jetonun süresi dolmuş mu?
+    if reset_record.expires_at < datetime.utcnow():
+        raise HTTPException(
+            status_code=400,
+            detail="Sıfırlama bağlantısının süresi dolmuş (1 saat). "
+                   "Lütfen yeniden talep edin."
+        )
+
+    # Jetonun sahibi kullanıcıyı bul
+    user = db.query(User).filter(User.tc_no == reset_record.tc_no).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
+
+    # Yeni şifreyi bcrypt ile hash'le ve kaydet
+    user.password_hash = bcrypt.hashpw(
+        req.new_password.encode("utf-8"),
+        bcrypt.gensalt()
+    ).decode("utf-8")
+
+    # Jeton tek kullanımlık olduğu için "kullanıldı" olarak işaretlenir
+    reset_record.used = True
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Şifreniz başarıyla güncellendi. "
+                   "Artık yeni şifrenizle giriş yapabilirsiniz.",
     }
 
 

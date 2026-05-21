@@ -85,6 +85,11 @@ export default function LoginPage() {
                 <Lock className="w-4 h-4 text-primary-500" /> {t('login.password_label')}
               </label>
               <input type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} placeholder={t('login.password_placeholder')} className="input-field" required />
+              <div className="text-right mt-2">
+                <Link to="/sifremi-unuttum" className="text-xs font-semibold text-primary-600 hover:underline">
+                  {t('login.forgot_password_link')}
+                </Link>
+              </div>
             </div>
 
             <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60">

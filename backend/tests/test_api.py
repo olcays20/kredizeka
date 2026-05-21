@@ -434,3 +434,101 @@ class TestAnalyticsHistory:
         # En az 1 bireysel analiz kayıtlı olmalı
         assert len(data["bireysel"]) >= 1
         assert data["toplam_analiz"] >= 1
+
+
+# =============================================================================
+# 8) ŞİFRE SIFIRLAMA TESTLERİ
+# =============================================================================
+
+class TestPasswordReset:
+    """POST /api/forgot-password & /api/reset-password — Şifre sıfırlama akışı."""
+
+    def test_forgot_password_registered_returns_200(self, client, registered_user):
+        """Kayıtlı bir e-posta için sıfırlama talebi HTTP 200 dönmeli."""
+        response = client.post("/api/forgot-password", json={
+            "email": "test.kullanici@kredizeka.com",
+        })
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+
+    def test_forgot_password_unregistered_same_response(self, client):
+        """
+        Kayıtsız bir e-posta da kayıtlı biriyle AYNI yanıtı almalı.
+        Bu, hangi e-postaların kayıtlı olduğunu sızdırmamak (user
+        enumeration koruması) için kritik bir güvenlik davranışıdır.
+        """
+        response = client.post("/api/forgot-password", json={
+            "email": "kesinlikle-kayitsiz@ornek.com",
+        })
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+
+    def test_reset_password_invalid_token_returns_400(self, client):
+        """Geçersiz bir jeton ile şifre sıfırlama HTTP 400 dönmeli."""
+        response = client.post("/api/reset-password", json={
+            "token": "bu-gecersiz-bir-jeton-xyz",
+            "new_password": "yeniSifre123",
+        })
+        assert response.status_code == 400
+
+    def test_reset_password_full_flow(self, client, unique_tc):
+        """
+        Uçtan uca akış: kayıt → sıfırlama talebi → jetonla yeni şifre →
+        eski şifre artık geçersiz, yeni şifre ile giriş başarılı.
+        """
+        # main.py'nin kullandığı aynı test veritabanı oturumu
+        from database import SessionLocal
+        from models import PasswordResetToken
+
+        email = f"akis.testi.{unique_tc}@kredizeka.com"
+
+        # 1) Kayıt ol
+        reg = client.post("/api/register", json={
+            "tc_no": unique_tc,
+            "full_name": "Akis Testi",
+            "email": email,
+            "phone": "05551234567",
+            "password": "eskiSifre1",
+        })
+        assert reg.status_code == 200
+
+        # 2) Şifre sıfırlama talebinde bulun
+        forgot = client.post("/api/forgot-password", json={"email": email})
+        assert forgot.status_code == 200
+
+        # 3) Üretilen jetonu veritabanından oku (e-posta simülasyonu yerine)
+        db = SessionLocal()
+        token_row = db.query(PasswordResetToken).filter(
+            PasswordResetToken.tc_no == unique_tc
+        ).order_by(PasswordResetToken.id.desc()).first()
+        token_value = token_row.token
+        db.close()
+        assert token_value, "Sıfırlama jetonu oluşturulmuş olmalı"
+
+        # 4) Jeton ile yeni şifre belirle
+        reset = client.post("/api/reset-password", json={
+            "token": token_value,
+            "new_password": "yeniSifre2",
+        })
+        assert reset.status_code == 200
+
+        # 5) Eski şifre artık çalışmamalı
+        old_login = client.post("/api/login", json={
+            "tc_no": unique_tc,
+            "password": "eskiSifre1",
+        })
+        assert old_login.status_code == 401
+
+        # 6) Yeni şifre ile giriş başarılı olmalı
+        new_login = client.post("/api/login", json={
+            "tc_no": unique_tc,
+            "password": "yeniSifre2",
+        })
+        assert new_login.status_code == 200
+
+        # 7) Aynı jeton ikinci kez kullanılamamalı (tek kullanımlık)
+        reuse = client.post("/api/reset-password", json={
+            "token": token_value,
+            "new_password": "baskaSifre3",
+        })
+        assert reuse.status_code == 400

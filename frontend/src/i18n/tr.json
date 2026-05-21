@@ -153,7 +153,8 @@
     "register_link": "Kayıt Olun",
     "validation_tc": "T.C. Kimlik No 11 hane olmalıdır.",
     "validation_password": "Parola en az 6 karakter olmalıdır.",
-    "welcome_toast": "Hoş geldiniz, {{name}}!"
+    "welcome_toast": "Hoş geldiniz, {{name}}!",
+    "forgot_password_link": "Şifremi Unuttum?"
   },
   "register": {
     "title": "Hesap Oluşturun",
@@ -180,6 +181,35 @@
     "validation_tc_zero": "T.C. Kimlik No 0 ile başlayamaz.",
     "validation_phone": "Telefon numarası 11 hane olmalıdır.",
     "validation_password": "Parola en az 6 karakter olmalıdır."
+  },
+  "forgot_password": {
+    "title": "Şifremi Unuttum",
+    "subtitle": "E-posta adresinizi girin, size bir sıfırlama bağlantısı gönderelim.",
+    "email_label": "E-posta Adresi",
+    "email_placeholder": "ornek@eposta.com",
+    "submit": "Sıfırlama Bağlantısı Gönder",
+    "submitting": "Gönderiliyor...",
+    "validation_email": "Geçerli bir e-posta adresi giriniz.",
+    "success_title": "E-postanızı Kontrol Edin",
+    "success_message": "Eğer bu adres sistemde kayıtlıysa, şifre sıfırlama bağlantısı gönderilmiştir. Bağlantı 1 saat boyunca geçerlidir.",
+    "back_to_login": "Giriş sayfasına dön"
+  },
+  "reset_password": {
+    "title": "Yeni Şifre Belirle",
+    "subtitle": "Hesabınız için yeni bir şifre oluşturun.",
+    "password_label": "Yeni Şifre",
+    "password_placeholder": "En az 6 karakter",
+    "confirm_label": "Yeni Şifre (Tekrar)",
+    "confirm_placeholder": "Şifrenizi tekrar girin",
+    "submit": "Şifreyi Güncelle",
+    "submitting": "Güncelleniyor...",
+    "validation_length": "Şifre en az 6 karakter olmalıdır.",
+    "validation_match": "Şifreler eşleşmiyor.",
+    "invalid_title": "Geçersiz Bağlantı",
+    "missing_token": "Sıfırlama bağlantısı geçersiz veya eksik. Lütfen yeni bir bağlantı talep edin.",
+    "request_new": "Yeni Bağlantı Talep Et",
+    "success_toast": "Şifreniz başarıyla güncellendi! Giriş yapabilirsiniz.",
+    "back_to_login": "Giriş sayfasına dön"
   },
   "profile": {
     "member_badge": "KrediZeka Üyesi",

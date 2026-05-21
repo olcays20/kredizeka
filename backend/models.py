@@ -228,3 +228,44 @@ class UrunlerAnalytics(Base):
             "yapay_zeka_tavsiyesi": self.yapay_zeka_tavsiyesi,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class PasswordResetToken(Base):
+    """
+    'password_reset_tokens' tablosu — Şifre sıfırlama jetonları.
+
+    Kullanıcı "Şifremi Unuttum" akışını başlattığında bir satır oluşturulur.
+    E-posta ile gönderilen sıfırlama linki bu tablodaki 'token' değerini taşır.
+
+    Sütunlar:
+      - id          : Otomatik artan PK
+      - tc_no       : users.tc_no'ya Foreign Key (jetonun sahibi kullanıcı)
+      - token       : Kriptografik olarak güvenli, benzersiz rastgele dizi
+      - expires_at  : Jetonun son geçerlilik anı (UTC) — genelde +1 saat
+      - used        : Jeton kullanıldıysa True (tek kullanımlık güvenlik)
+      - created_at  : Jetonun oluşturulma anı (UTC)
+
+    Güvenlik notu:
+      Bir jeton yalnızca BİR kez kullanılabilir ('used' bayrağı) ve süresi
+      dolduğunda ('expires_at') geçersiz sayılır. Bu, çalınan veya eski bir
+      linkin sınırsızca kullanılmasını engeller.
+    """
+
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    tc_no = Column(String(11), ForeignKey("users.tc_no", ondelete="CASCADE"),
+                   nullable=False, index=True)
+    token = Column(String(255), unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "tc_no": self.tc_no,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "used": bool(self.used),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }

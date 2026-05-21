@@ -10,6 +10,7 @@ Kullanım:
     print(settings.database_url)
 """
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -57,6 +58,24 @@ class Settings(BaseSettings):
         extra="ignore",
         protected_namespaces=('settings_',),
     )
+
+    @field_validator("database_url")
+    @classmethod
+    def normalize_database_url(cls, v: str) -> str:
+        """
+        Veritabanı URL'ini SQLAlchemy + psycopg2 ile uyumlu hale getirir.
+
+        Render, Heroku gibi sağlayıcılar PostgreSQL bağlantı URL'ini
+        'postgres://' veya 'postgresql://' önekiyle verir. SQLAlchemy'nin
+        psycopg2 sürücüsünü açıkça kullanması için öneki 'postgresql+psycopg2://'
+        olarak düzeltiyoruz. Bu sayede kullanıcı, sağlayıcının verdiği URL'i
+        olduğu gibi yapıştırabilir.
+        """
+        if v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+psycopg2://", 1)
+        if v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+psycopg2://", 1)
+        return v
 
     @property
     def cors_origin_list(self) -> list[str]:

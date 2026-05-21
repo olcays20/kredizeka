@@ -79,8 +79,8 @@ export default function KullanimKosullariPage() {
           </div>
           <h3 className="text-lg font-bold text-slate-900 mb-2">{t('legal.cta_title_terms')}</h3>
           <p className="text-sm text-slate-500 mb-4">{t('legal.cta_desc_terms')}</p>
-          <a href="mailto:destek@kredizeka.com" className="inline-flex items-center gap-2 text-amber-700 font-bold hover:text-amber-900 transition-colors duration-300">
-            <Mail className="w-4 h-4" /> destek@kredizeka.com
+          <a href="mailto:kredizeka.destek@gmail.com" className="inline-flex items-center gap-2 text-amber-700 font-bold hover:text-amber-900 transition-colors duration-300">
+            <Mail className="w-4 h-4" /> kredizeka.destek@gmail.com
           </a>
         </div>
       </section>

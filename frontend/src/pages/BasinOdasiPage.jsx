@@ -98,9 +98,9 @@ export default function BasinOdasiPage() {
           <h2 className="text-2xl md:text-3xl font-extrabold mb-2">{t('basin.press_contact_title')}</h2>
           <p className="text-slate-400 max-w-lg mx-auto mb-8">{t('basin.press_contact_desc')}</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-8">
-            <a href="mailto:basin@kredizeka.com" className="flex items-center gap-3 bg-white/10 hover:bg-white/20 transition-colors duration-300 px-6 py-3.5 rounded-xl">
+            <a href="mailto:kredizeka.destek@gmail.com" className="flex items-center gap-3 bg-white/10 hover:bg-white/20 transition-colors duration-300 px-6 py-3.5 rounded-xl">
               <Mail className="w-5 h-5 text-primary-400" />
-              <span className="font-semibold">basin@kredizeka.com</span>
+              <span className="font-semibold">kredizeka.destek@gmail.com</span>
             </a>
             <a href="tel:+908501234567" className="flex items-center gap-3 bg-white/10 hover:bg-white/20 transition-colors duration-300 px-6 py-3.5 rounded-xl">
               <Phone className="w-5 h-5 text-primary-400" />

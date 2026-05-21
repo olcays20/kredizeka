@@ -62,9 +62,11 @@ class Settings(BaseSettings):
     # boşsa e-posta simüle edilir (sıfırlama linki sunucu log'una yazılır).
     # GÜVENLİK: Anahtar yalnızca ortam değişkeniyle verilir, koda yazılmaz.
     brevo_api_key: str = ""
-    # Brevo panelinde DOĞRULANMIŞ gönderen e-posta adresi (ör. kendi Gmail'in)
-    brevo_sender_email: str = ""
-    brevo_sender_name: str = "KrediZeka"
+    # Brevo panelinde DOĞRULANMIŞ gönderen e-posta adresi.
+    # Varsayılan, projenin kurumsal destek adresidir; gerekirse ortam
+    # değişkeniyle (BREVO_SENDER_EMAIL) değiştirilebilir.
+    brevo_sender_email: str = "kredizeka.destek@gmail.com"
+    brevo_sender_name: str = "KrediZeka Destek"
 
     # ─── Frontend Adresi ────────────────────────────────────────────
     # Şifre sıfırlama linki bu adres üzerinden oluşturulur:

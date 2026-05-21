@@ -146,7 +146,7 @@ export default function Footer() {
                 </div>
                 <div>
                   <p className="text-slate-400 text-xs mb-0.5">{t('footer.email_label')}</p>
-                  <p className="text-white text-sm font-semibold">destek@kredizeka.com</p>
+                  <p className="text-white text-sm font-semibold">kredizeka.destek@gmail.com</p>
                 </div>
               </li>
               <li className="flex items-start gap-3">

@@ -17,10 +17,10 @@ export const privacySections = [
     content: {
       tr: `KrediZeka Finansal Teknoloji A.Ş. (bundan böyle "KrediZeka" olarak anılacaktır), 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında veri sorumlusu sıfatını taşımaktadır. Merkezi Levent, İstanbul, Türkiye'de bulunan şirketimiz, bu politikada belirtilen esaslar çerçevesinde kişisel verilerinizi işlemektedir.
 
-Şirket iletişim bilgileri: destek@kredizeka.com | +90 850 123 45 67`,
+Şirket iletişim bilgileri: kredizeka.destek@gmail.com | +90 850 123 45 67`,
       en: `KrediZeka Financial Technology Inc. (hereinafter referred to as "KrediZeka") acts as the data controller under the Personal Data Protection Law No. 6698 ("KVKK"). Our company, headquartered in Levent, Istanbul, Türkiye, processes your personal data within the framework set forth in this policy.
 
-Company contact: destek@kredizeka.com | +90 850 123 45 67`,
+Company contact: kredizeka.destek@gmail.com | +90 850 123 45 67`,
     },
   },
   {
@@ -158,7 +158,7 @@ You can manage cookies from your browser settings; however, disabling essential 
 • Otomatik sistemler vasıtasıyla aleyhine bir sonuç doğurması halinde buna itiraz etme
 • Kanuna aykırı işleme nedeniyle zarara uğraması halinde zararın giderilmesini talep etme
 
-Bu haklarınızı kullanmak için destek@kredizeka.com adresine yazılı başvuruda bulunabilirsiniz. Başvurularınız 30 gün içinde yanıtlanır.`,
+Bu haklarınızı kullanmak için kredizeka.destek@gmail.com adresine yazılı başvuruda bulunabilirsiniz. Başvurularınız 30 gün içinde yanıtlanır.`,
       en: `Under Article 11 of KVKK No. 6698, you have the following rights:
 
 • Learn whether your personal data is being processed
@@ -170,7 +170,7 @@ Bu haklarınızı kullanmak için destek@kredizeka.com adresine yazılı başvur
 • Object if it produces an unfavorable result against you via automated systems
 • Request compensation if you suffer damage due to unlawful processing
 
-To exercise these rights, you can apply in writing to destek@kredizeka.com. Your applications will be answered within 30 days.`,
+To exercise these rights, you can apply in writing to kredizeka.destek@gmail.com. Your applications will be answered within 30 days.`,
     },
   },
 ];
@@ -277,14 +277,14 @@ Users;
       tr: `Hesabınızın güvenliğinden kullanıcı olarak sizin sorumluluğunuzdasınız. Aşağıdaki kurallara uymanız gerekmektedir:
 
 • Hesap parolanızı kimseyle paylaşmayınız. KrediZeka hiçbir koşulda kullanıcıdan parolasını talep etmez.
-• Parolanızın ele geçirildiğini düşündüğünüzde derhal destek@kredizeka.com adresine bildiriniz.
+• Parolanızın ele geçirildiğini düşündüğünüzde derhal kredizeka.destek@gmail.com adresine bildiriniz.
 • Kamu bilgisayarı veya paylaşımlı cihaz kullandıktan sonra oturumunuzu kapatınız.
 • Hesabınızın başkası tarafından yetkisiz kullanıldığını fark etmeniz durumunda KrediZeka'yı derhal bilgilendiriniz.
 • Güvenlik ihlaline neden olabilecek davranışlar tespit edilmesi halinde KrediZeka hesabınızı geçici veya kalıcı olarak askıya alma hakkını saklı tutar.`,
       en: `You as the user are responsible for the security of your account. You must comply with the following rules:
 
 • Do not share your account password with anyone. KrediZeka never requests your password under any circumstances.
-• If you suspect that your password has been compromised, immediately notify destek@kredizeka.com.
+• If you suspect that your password has been compromised, immediately notify kredizeka.destek@gmail.com.
 • Close your session after using a public computer or shared device.
 • If you notice unauthorized use of your account by someone else, immediately inform KrediZeka.
 • KrediZeka reserves the right to temporarily or permanently suspend your account if behaviors that may cause security breaches are detected.`,
@@ -302,7 +302,7 @@ Users;
 • Koşullardaki önemli değişiklikler, kayıtlı e-posta adresi veya platform üzerinden duyuru yoluyla kullanıcılara bildirilir.
 • Değişikliklerin yürürlüğe girmesinden sonra platformu kullanmaya devam etmek, güncel koşulların kabul edildiği anlamına gelir.
 • KrediZeka, kullanım koşullarına aykırı davranan kullanıcıların hesabını önceden uyarı vermeksizin kapatabilir.
-• Kullanıcı, hesabını istediği zaman destek@kredizeka.com adresi üzerinden kapatma talebinde bulunabilir.
+• Kullanıcı, hesabını istediği zaman kredizeka.destek@gmail.com adresi üzerinden kapatma talebinde bulunabilir.
 
 Bu koşullar Türk Hukuku'na tabidir. Uyuşmazlıklarda İstanbul Mahkemeleri ve İcra Daireleri yetkilidir.`,
       en: `KrediZeka reserves the right to change, update, or remove these terms of use without prior notice.
@@ -310,7 +310,7 @@ Bu koşullar Türk Hukuku'na tabidir. Uyuşmazlıklarda İstanbul Mahkemeleri ve
 • Significant changes to the terms are notified to users via registered email address or through announcements on the platform.
 • Continuing to use the platform after the changes take effect means acceptance of the current terms.
 • KrediZeka may close the account of users who act contrary to the terms of use without prior warning.
-• The user may request to close their account at any time via destek@kredizeka.com.
+• The user may request to close their account at any time via kredizeka.destek@gmail.com.
 
 These terms are subject to Turkish Law. Istanbul Courts and Enforcement Offices have jurisdiction in disputes.`,
     },

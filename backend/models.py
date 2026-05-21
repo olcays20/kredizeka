@@ -37,6 +37,7 @@ class User(Base):
       - id              : Otomatik artan PK
       - tc_no           : Türkiye Cumhuriyeti Kimlik No (unique, 11 hane)
       - full_name       : Ad Soyad
+      - email           : E-posta adresi (kayıt sırasında alınır)
       - phone           : Cep telefonu (11 hane)
       - password_hash   : Bcrypt ile hash'lenmiş parola
       - occupation      : Meslek (opsiyonel)
@@ -56,6 +57,9 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     tc_no = Column(String(11), unique=True, nullable=False, index=True)
     full_name = Column(String(100), nullable=False)
+    # E-posta adresi — kayıt sırasında alınır. Var olan eski kayıtlarda boş
+    # ('') olabileceğinden unique kısıtı uygulanmaz (birden çok boş değere izin).
+    email = Column(String(255), default="", nullable=False)
     phone = Column(String(11), nullable=False)
     password_hash = Column(String(255), nullable=False)
     occupation = Column(String(200), default="", nullable=False)
@@ -87,6 +91,7 @@ class User(Base):
         data = {
             "tc_no": self.tc_no,
             "full_name": self.full_name,
+            "email": self.email or "",
             "phone": self.phone,
             "occupation": self.occupation or "",
             "address": self.address or "",

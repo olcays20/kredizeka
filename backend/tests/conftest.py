@@ -104,6 +104,7 @@ def registered_user(client, unique_tc):
     user_data = {
         "tc_no": unique_tc,
         "full_name": "Test Kullanıcı",
+        "email": "test.kullanici@kredizeka.com",
         "phone": "05551234567",
         "password": "test1234",
     }

@@ -9,21 +9,30 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { UserPlus, User, CreditCard, Phone, Lock, ArrowRight } from 'lucide-react';
+import { UserPlus, User, CreditCard, Mail, Phone, Lock, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import GoogleLoginButton from '../components/GoogleLoginButton';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [form, setForm] = useState({ full_name: '', tc_no: '', phone: '', password: '' });
+  const [form, setForm] = useState({ full_name: '', email: '', tc_no: '', phone: '', password: '' });
   const [loading, setLoading] = useState(false);
+
+  // E-posta formatını doğrulayan Regex: "@ içermeyen metin" + "@" +
+  // "@ içermeyen metin" + "." + "@ ve boşluk içermeyen metin"
+  const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
   const handleNameInput = (e) => {
     const val = e.target.value.replace(/[^a-zA-ZçÇğĞıİöÖşŞüÜ\s]/g, '');
     setForm((p) => ({ ...p, full_name: val }));
+  };
+
+  // E-posta alanı: serbest metin (harf/rakam/sembol). Karakter filtresi yok;
+  // doğrulama, gönderim anında EMAIL_REGEX ile yapılır.
+  const handleEmailInput = (e) => {
+    setForm((p) => ({ ...p, email: e.target.value }));
   };
 
   const handleTcInput = (e) => {
@@ -40,6 +49,7 @@ export default function RegisterPage() {
     e.preventDefault();
 
     if (form.full_name.trim().length < 2) return toast.error(t('register.validation_name'));
+    if (!EMAIL_REGEX.test(form.email.trim())) return toast.error(t('register.validation_email'));
     if (form.tc_no.length !== 11) return toast.error(t('register.validation_tc_length'));
     if (form.tc_no.startsWith('0')) return toast.error(t('register.validation_tc_zero'));
     if (form.phone.length !== 11) return toast.error(t('register.validation_phone'));
@@ -92,6 +102,14 @@ export default function RegisterPage() {
 
             <div>
               <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
+                <Mail className="w-4 h-4 text-primary-500" /> {t('register.email_label')}
+              </label>
+              <input type="email" value={form.email} onInput={handleEmailInput} placeholder={t('register.email_placeholder')} className="input-field" required />
+              <p className="text-xs text-slate-400 mt-1">{t('register.email_hint')}</p>
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
                 <CreditCard className="w-4 h-4 text-primary-500" /> {t('register.tc_label')}
               </label>
               <input type="text" value={form.tc_no} onInput={handleTcInput} placeholder={t('register.tc_placeholder')} className="input-field" required />
@@ -121,15 +139,6 @@ export default function RegisterPage() {
               )}
             </button>
           </form>
-
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-slate-200" />
-            <span className="text-xs text-slate-400 font-medium">{t('auth.divider_or')}</span>
-            <div className="flex-1 h-px bg-slate-200" />
-          </div>
-
-          {/* Google ile sosyal giriş (OAuth2 — mock) */}
-          <GoogleLoginButton />
 
           <p className="text-center text-sm text-slate-500 mt-6">
             {t('register.have_account')}{' '}

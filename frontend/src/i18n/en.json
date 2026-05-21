@@ -161,6 +161,9 @@
     "name_label": "Full Name",
     "name_placeholder": "First and last name",
     "name_hint": "You may only enter letters and spaces",
+    "email_label": "Email Address",
+    "email_placeholder": "example@email.com",
+    "email_hint": "Account notifications are sent to this address.",
     "tc_label": "T.C. ID Number",
     "tc_placeholder": "11-digit T.C. ID Number",
     "phone_label": "Mobile Phone",
@@ -172,6 +175,7 @@
     "have_account": "Already have an account?",
     "login_link": "Sign In",
     "validation_name": "Full name must be at least 2 characters.",
+    "validation_email": "Please enter a valid email address.",
     "validation_tc_length": "T.C. ID Number must be 11 digits.",
     "validation_tc_zero": "T.C. ID Number cannot start with 0.",
     "validation_phone": "Phone number must be 11 digits.",
@@ -583,12 +587,5 @@
     "loading": "Loading...",
     "server_unreachable": "Could not connect to the server. Please check your internet connection.",
     "unexpected_error": "An unexpected error occurred."
-  },
-  "auth": {
-    "google_continue": "Continue with Google",
-    "google_connecting": "Connecting...",
-    "google_success": "Signed in with Google! Welcome, {{name}}.",
-    "google_error": "Could not sign in with Google.",
-    "divider_or": "or"
   }
 }

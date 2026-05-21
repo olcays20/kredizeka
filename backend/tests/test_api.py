@@ -58,6 +58,7 @@ class TestRegister:
         response = client.post("/api/register", json={
             "tc_no": unique_tc,
             "full_name": "Ahmet Yılmaz",
+            "email": "ahmet.yilmaz@kredizeka.com",
             "phone": "05551112233",
             "password": "guvenli123",
         })
@@ -74,6 +75,7 @@ class TestRegister:
         user = {
             "tc_no": unique_tc,
             "full_name": "Zeynep Kaya",
+            "email": "zeynep.kaya@kredizeka.com",
             "phone": "05559998877",
             "password": "parola456",
         }
@@ -94,6 +96,7 @@ class TestRegister:
         response = client.post("/api/register", json={
             "tc_no": "1234567890A",  # Son karakter harf — geçersiz
             "full_name": "Hatalı Kullanıcı",
+            "email": "hatali@kredizeka.com",
             "phone": "05551234567",
             "password": "parola123",
         })
@@ -106,6 +109,7 @@ class TestRegister:
         response = client.post("/api/register", json={
             "tc_no": "01234567890",  # 0 ile başlıyor — geçersiz
             "full_name": "Sıfır Kullanıcı",
+            "email": "sifir@kredizeka.com",
             "phone": "05551234567",
             "password": "parola123",
         })
@@ -118,8 +122,24 @@ class TestRegister:
         response = client.post("/api/register", json={
             "tc_no": unique_tc,
             "full_name": "Kısa Parola",
+            "email": "kisa.parola@kredizeka.com",
             "phone": "05551234567",
             "password": "123",  # 3 karakter — minimum 6 gerekli
+        })
+        assert response.status_code == 422
+
+    def test_register_invalid_email_returns_422(self, client, unique_tc):
+        """
+        Geçersiz formatta bir e-posta adresi ile kayıt reddedilmeli.
+        E-posta '@' ve geçerli bir alan adı içermiyorsa Pydantic
+        validasyonu devreye girer ve HTTP 422 döner.
+        """
+        response = client.post("/api/register", json={
+            "tc_no": unique_tc,
+            "full_name": "Gecersiz Eposta",
+            "email": "bu-bir-eposta-degil",  # '@' yok — geçersiz format
+            "phone": "05551234567",
+            "password": "parola123",
         })
         assert response.status_code == 422
 

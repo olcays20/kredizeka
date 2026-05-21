@@ -15,6 +15,7 @@ Bu sürümle birlikte:
 """
 
 import os
+import re
 import asyncio
 import random
 from contextlib import asynccontextmanager
@@ -143,36 +144,60 @@ def init_database() -> None:
 
 def _legacy_migrate() -> None:
     """
-    Eski SQLite kurulumlarda eksik kolonları ekler.
-    PostgreSQL üzerinde Base.metadata.create_all bunu zaten halleder.
-    """
-    if not settings.database_url.startswith("sqlite"):
-        return  # PostgreSQL — gerek yok
+    Var olan tablolara, ORM'e sonradan eklenen kolonları ekler.
 
+    Base.metadata.create_all yalnızca YENİ tabloları oluşturur; var olan bir
+    tabloya yeni kolon EKLEMEZ. Bu yüzden sonradan eklenen 'email' gibi
+    kolonlar için elle ALTER TABLE çalıştırılır. Bu işlem hem PostgreSQL
+    (üretim) hem SQLite (yerel) için güvenlidir.
+    """
     inspector = inspect(engine)
     if "users" not in inspector.get_table_names():
-        return
+        return  # Tablo henüz yok — create_all doğru şemayla oluşturacak
 
     existing_cols = {col["name"] for col in inspector.get_columns("users")}
-    migrations = {
-        "profile_picture": "ALTER TABLE users ADD COLUMN profile_picture TEXT DEFAULT ''",
-        "is_admin": "ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0",
-        "created_at": "ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT ''",
-    }
-    with engine.begin() as conn:
-        for col, sql in migrations.items():
-            if col not in existing_cols:
-                conn.execute(text(sql))
-                print(f"🔄 SQLite migration: '{col}' kolonu eklendi.")
+
+    # ─── Cross-database migration: 'email' kolonu ──────────────────────
+    # "VARCHAR(255) NOT NULL DEFAULT ''" sözdizimi hem PostgreSQL hem SQLite'da
+    # geçerlidir. Var olan satırlar boş e-posta ('') ile doldurulur — böylece
+    # daha önce kaydolmuş kullanıcılar etkilenmez.
+    if "email" not in existing_cols:
+        with engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN email VARCHAR(255) NOT NULL DEFAULT ''"
+            ))
+        print("🔄 Migration: 'email' kolonu users tablosuna eklendi.")
+
+    # ─── Yalnızca eski SQLite kurulumları için ek kolonlar ─────────────
+    # Bu kolonlar SQLite'a özgü tiplerle (INTEGER/TEXT) eklenir; PostgreSQL'de
+    # create_all zaten doğru tiplerle oluşturduğu için gerekli değildir.
+    if settings.database_url.startswith("sqlite"):
+        sqlite_migrations = {
+            "profile_picture": "ALTER TABLE users ADD COLUMN profile_picture TEXT DEFAULT ''",
+            "is_admin": "ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0",
+            "created_at": "ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT ''",
+        }
+        with engine.begin() as conn:
+            for col, sql in sqlite_migrations.items():
+                if col not in existing_cols:
+                    conn.execute(text(sql))
+                    print(f"🔄 SQLite migration: '{col}' kolonu eklendi.")
 
 
 # =============================================================================
 # PYDANTIC ŞEMALAR
 # =============================================================================
 
+# E-posta adresi format doğrulaması için basit Regex deseni.
+# Mantık: "@ içermeyen 1+ karakter" + "@" + "@ içermeyen 1+ karakter" + "."
+# + "@ ve nokta içermeyen 1+ karakter" (örn. ad@alan.com).
+_EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
 class RegisterRequest(BaseModel):
     tc_no: str = Field(..., min_length=11, max_length=11)
     full_name: str = Field(..., min_length=2, max_length=100)
+    email: str = Field(..., min_length=5, max_length=255)
     phone: str = Field(..., min_length=11, max_length=11)
     password: str = Field(..., min_length=6, max_length=100)
 
@@ -184,6 +209,16 @@ class RegisterRequest(BaseModel):
         if v[0] == "0":
             raise ValueError("T.C. Kimlik Numarası 0 ile başlayamaz.")
         return v
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        """E-posta adresinin geçerli bir formatta olduğunu doğrular."""
+        v = v.strip()
+        if not _EMAIL_REGEX.match(v):
+            raise ValueError("Geçerli bir e-posta adresi giriniz (örn. ad@alan.com).")
+        # E-posta adresleri büyük/küçük harf duyarsızdır; küçük harfe normalize edilir
+        return v.lower()
 
     @field_validator("phone")
     @classmethod
@@ -284,18 +319,6 @@ class ChatRequest(BaseModel):
     """
     message: str = Field(..., min_length=1, max_length=500,
                          description="Kullanıcının sohbet mesajı")
-
-
-class GoogleAuthRequest(BaseModel):
-    """
-    Google ile giriş (OAuth2 — Mock/Simülasyon) isteği.
-
-    credential : Frontend'in gönderdiği sahte (mock) Google kimlik jetonu.
-                 Gerçek bir projede bu, Google'ın imzaladığı bir JWT olurdu;
-                 akademik portföy projesi olduğundan burada simüle edilir.
-    """
-    credential: str = Field(..., min_length=1, max_length=4000,
-                            description="Mock Google kimlik jetonu")
 
 
 # =============================================================================
@@ -477,6 +500,7 @@ async def register(
     user = User(
         tc_no=req.tc_no,
         full_name=req.full_name,
+        email=req.email,
         phone=req.phone,
         password_hash=password_hash,
     )
@@ -1253,87 +1277,6 @@ async def chat(request: Request, req: ChatRequest):
         "reply": payload["reply"],
         "intent": payload["intent"],
         "source": "keyword",
-    }
-
-
-# =============================================================================
-# OAUTH2 — GOOGLE İLE SOSYAL GİRİŞ (MOCK / SİMÜLASYON)
-# =============================================================================
-
-@app.post("/api/auth/google-mock")
-@limiter.limit(settings.auth_rate_limit)
-async def google_mock_login(
-    request: Request,
-    req: GoogleAuthRequest,
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
-):
-    """
-    Google ile tek tıkla giriş (OAuth2 — Mock).
-
-    Gerçek bir OAuth2 akışında frontend, Google'dan imzalı bir kimlik jetonu
-    alır; backend bu jetonu Google'ın açık anahtarıyla doğrular. Bu akademik
-    projede gerçek Google Client ID kullanılmadığından süreç simüle edilir:
-
-      1. Frontend sahte bir 'credential' (mock jeton) gönderir.
-      2. Backend, kullanıcıya benzersiz rastgele bir T.C. No atar.
-      3. 'users' tablosunda "Google Kullanıcısı" adıyla yeni bir kayıt açılır.
-      4. Standart oturum yükü (kullanıcı bilgisi + mock JWT) döndürülür.
-
-    Yanıt formatı, /api/login ile birebir aynıdır — böylece frontend tarafı
-    Google girişini de normal giriş gibi işler, ek bir mantık gerekmez.
-
-    Rate limit: settings.auth_rate_limit
-    """
-    # ─── 1) Benzersiz, geçerli bir T.C. Kimlik No üret ─────────────────
-    # 11 haneli, 0 ile başlamayan (10^10 ile 10^11-1 arası) rastgele sayı.
-    # Çakışma ihtimaline karşı en fazla 20 deneme yapılır.
-    tc_no: Optional[str] = None
-    for _ in range(20):
-        candidate = str(random.randint(10_000_000_000, 99_999_999_999))
-        if not db.query(User).filter(User.tc_no == candidate).first():
-            tc_no = candidate
-            break
-    if tc_no is None:
-        raise HTTPException(
-            status_code=500,
-            detail="Benzersiz kimlik üretilemedi. Lütfen tekrar deneyin."
-        )
-
-    # ─── 2) Rastgele güçlü bir parola hash'i oluştur ───────────────────
-    # Google ile gelen kullanıcı parola ile giriş yapmayacağından, hesaba
-    # kimsenin tahmin edemeyeceği rastgele bir parola atanır (güvenlik).
-    random_secret = os.urandom(16).hex()
-    password_hash = bcrypt.hashpw(
-        random_secret.encode("utf-8"),
-        bcrypt.gensalt()
-    ).decode("utf-8")
-
-    # ─── 3) Veritabanında yeni kullanıcı kaydı aç ──────────────────────
-    user = User(
-        tc_no=tc_no,
-        full_name="Google Kullanıcısı",
-        phone="00000000000",
-        password_hash=password_hash,
-        is_admin=False,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    # ─── 4) Asenkron hoş geldin e-postası (kullanıcı bekletilmez) ──────
-    background_tasks.add_task(send_welcome_email, user.tc_no, user.full_name)
-
-    # ─── 5) Mock JWT + standart oturum yükünü döndür ───────────────────
-    # Gerçek projede burada imzalı bir JWT üretilirdi; simülasyonda rastgele
-    # bir jeton dizisi yeterlidir — frontend oturumu 'user' alanıyla kurar.
-    mock_jwt = "mock-google-jwt." + os.urandom(24).hex()
-
-    return {
-        "success": True,
-        "message": f"Google ile giriş başarılı! Hoş geldiniz {user.full_name}.",
-        "token": mock_jwt,
-        "user": user.to_dict(),
     }
 
 

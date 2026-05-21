@@ -161,6 +161,9 @@
     "name_label": "Ad Soyad",
     "name_placeholder": "Adınız Soyadınız",
     "name_hint": "Sadece harf ve boşluk girebilirsiniz",
+    "email_label": "E-posta Adresi",
+    "email_placeholder": "ornek@eposta.com",
+    "email_hint": "Hesap bildirimleri bu adrese gönderilir.",
     "tc_label": "T.C. Kimlik No",
     "tc_placeholder": "11 haneli T.C. Kimlik No",
     "phone_label": "Cep Telefonu",
@@ -172,6 +175,7 @@
     "have_account": "Zaten hesabınız var mı?",
     "login_link": "Giriş Yap",
     "validation_name": "Ad Soyad en az 2 karakter olmalıdır.",
+    "validation_email": "Geçerli bir e-posta adresi giriniz.",
     "validation_tc_length": "T.C. Kimlik No 11 hane olmalıdır.",
     "validation_tc_zero": "T.C. Kimlik No 0 ile başlayamaz.",
     "validation_phone": "Telefon numarası 11 hane olmalıdır.",
@@ -583,12 +587,5 @@
     "loading": "Yükleniyor...",
     "server_unreachable": "Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.",
     "unexpected_error": "Beklenmeyen bir hata oluştu."
-  },
-  "auth": {
-    "google_continue": "Google ile Devam Et",
-    "google_connecting": "Bağlanılıyor...",
-    "google_success": "Google ile giriş başarılı! Hoş geldiniz, {{name}}.",
-    "google_error": "Google ile giriş yapılamadı.",
-    "divider_or": "veya"
   }
 }

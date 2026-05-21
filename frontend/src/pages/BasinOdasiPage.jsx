@@ -9,8 +9,7 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Newspaper, Calendar, ChevronRight, Download, Image, BookOpen,
-  Mail, Phone, Clock, ArrowRight,
+  Newspaper, Calendar, ChevronRight, Mail, Phone, Clock, ArrowRight,
 } from 'lucide-react';
 import { news, localizeNews } from '../data/newsData';
 import NewsModal from '../components/NewsModal';
@@ -25,13 +24,6 @@ export default function BasinOdasiPage() {
     [i18n.language]
   );
   const featuredNews = localizedNews.slice(0, 4);
-
-  // Medya kit (çeviriden okunur)
-  const mediaKit = [
-    { icon: Download, key: 'media_logo', size: '4.2 MB' },
-    { icon: Image, key: 'media_photos', size: '38.7 MB' },
-    { icon: BookOpen, key: 'media_brand', size: '2.1 MB' },
-  ];
 
   return (
     <div className="min-h-screen pt-24 pb-16">
@@ -51,6 +43,7 @@ export default function BasinOdasiPage() {
         </div>
       </section>
 
+      {/* ─── SON HABERLER ─── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="flex items-center justify-between flex-wrap gap-4 mb-10">
           <div>
@@ -96,30 +89,7 @@ export default function BasinOdasiPage() {
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl font-extrabold text-slate-900 mb-3">
-            {t('basin.section_media_title_part1')} <span className="gradient-text">{t('basin.section_media_title_part2')}</span>
-          </h2>
-          <p className="text-slate-500 max-w-xl mx-auto">{t('basin.section_media_subtitle')}</p>
-        </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          {mediaKit.map(({ icon: Icon, key, size }) => (
-            <div key={key} className="card p-8 group text-center">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-lg mb-5 group-hover:scale-110 transition-transform duration-300">
-                <Icon className="w-7 h-7 text-white" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">{t(`basin.${key}_title`)}</h3>
-              <p className="text-sm text-slate-500 leading-relaxed mb-2">{t(`basin.${key}_desc`)}</p>
-              <p className="text-xs text-slate-400 mb-5">{t('basin.media_size_label')}: {size}</p>
-              <button type="button" className="btn-secondary inline-flex items-center gap-2 text-sm py-2.5 px-5">
-                <Download className="w-4 h-4" /> {t('basin.media_download')}
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
+      {/* ─── BASIN İLETİŞİM ─── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div className="card-static p-10 md:p-14 bg-gradient-to-r from-slate-900 to-slate-800 rounded-3xl text-white text-center">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-white/10 flex items-center justify-center mb-6">

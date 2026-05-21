@@ -1,15 +1,11 @@
 /**
  * KrediZeka - Kurgusal Basın & Haber Verileri (Çift Dilli)
  * ===========================================================
- * Bu dosya, Basın Odası ve Haberler sayfalarında kullanılan tüm haber
- * verilerini tek bir kaynaktan sağlar.
+ * Basın Odası ve Haberler sayfalarının haber kaynağı.
  *
- * Yapı (çift dilli içerik):
- *   - id, date, monthLabel, tag, tagColor, tagKey → tek değer
- *   - title, summary, content → { tr, en } objesi olarak çift dilde tutulur
- *
- * Yardımcı fonksiyon localizeNews(item, lang), bir haberi seçilen dile
- * göre düz objeye dönüştürür (kullanım: tüketici bileşenlerde t() ile uyumlu).
+ * Yapı (çift dilli):
+ *   - id, date, monthLabel, tag, tagKey, tagColor → tek değer
+ *   - title, summary, content → { tr, en } objesi
  *
  * ÖNEMLİ NOT:
  * Tüm haberler kurgusaldır ve KrediZeka'nın kendi teknolojik başarılarına
@@ -18,254 +14,249 @@
 
 export const news = [
   {
-    id: 'yeni-yz-altyapisi-2026',
-    date: '12 Mayıs 2026',
+    id: 'aciklanabilir-yz-shap-2026',
+    date: '19 Mayıs 2026',
     monthLabel: 'Mayıs 2026',
     tag: 'Teknoloji',
     tagKey: 'tag_technology',
     tagColor: 'bg-blue-100 text-blue-700',
     title: {
-      tr: 'KrediZeka, Yeni Nesil Yapay Zekâ Altyapısını Duyurdu',
-      en: 'KrediZeka Announces Next-Generation AI Infrastructure',
+      tr: 'KrediZeka Açıklanabilir Yapay Zekâ (SHAP) Özelliğini Yayına Aldı',
+      en: 'KrediZeka Launches Explainable AI (SHAP) Feature',
     },
     summary: {
-      tr: 'KrediZeka, kredi risk skorlama hızını 3 kat artıran yeni nesil yapay zekâ altyapısını tanıttı. Yeni sistem, kullanıcıların finansal verilerini saniyenin onda biri içinde analiz ediyor.',
-      en: 'KrediZeka unveiled its next-generation AI infrastructure that triples credit risk scoring speed. The new system analyzes users\' financial data in a tenth of a second.',
+      tr: 'KrediZeka, risk skorunun arkasındaki kararı şeffaf biçimde gösteren SHAP tabanlı "Etki Grafiği" özelliğini tüm kullanıcılara açtı. Artık her analizde hangi faktörün ne yönde etki ettiği görülebiliyor.',
+      en: 'KrediZeka rolled out its SHAP-based "Impact Chart" feature, which transparently shows the decision behind every risk score. Users can now see which factor influenced their score and in which direction.',
     },
     content: {
       tr: [
-        'KrediZeka, Ar-Ge ekibinin son 14 ay boyunca üzerinde çalıştığı yeni nesil yapay zekâ altyapısını resmi olarak hizmete aldığını duyurdu. Yeni altyapı; aynı kalitede risk değerlendirmesini, önceki sürüme kıyasla yaklaşık 3 kat daha hızlı sunabiliyor.',
-        'Şirketin baş teknoloji sorumlusu (CTO), yeni altyapının yalnızca hız değil aynı zamanda enerji verimliliği konusunda da önemli bir adım olduğunu vurguladı. Yeni model, eski sürüme göre işlem başına %42 daha az hesaplama kaynağı tüketiyor.',
-        'KrediZeka kullanıcıları, yeni altyapıdan otomatik olarak yararlanmaya başladı. Sistem değişikliği şeffaf bir şekilde gerçekleştirildiği için kullanıcıların ek bir işlem yapmasına gerek bulunmuyor.',
-        'Şirket önümüzdeki çeyrekte yapay zekâ altyapısının açıklanabilirlik (explainability) modülünü de devreye alacağını duyurdu. Bu modül sayesinde kullanıcılar, aldıkları risk skorunun arkasındaki kararı oluşturan faktörleri tek tek görebilecek.',
+        'KrediZeka, kullanıcıların en çok talep ettiği özelliklerden biri olan açıklanabilir yapay zekâyı (XAI) platforma entegre ettiğini duyurdu. Yeni "Etki Grafiği", her risk analizinin ardından devreye giriyor.',
+        'SHAP (SHapley Additive exPlanations) yöntemiyle hesaplanan grafik; gelir, kredi geçmişi, borç-gelir oranı gibi faktörlerin skoru ne kadar ve hangi yönde etkilediğini yatay bir bar grafikle gösteriyor. Olumlu etkiler yeşil, olumsuz etkiler kırmızı renkle ayrılıyor.',
+        'Şirketin ürün ekibinden bir yetkili, "Kullanıcılar yıllardır kredi kararlarının bir kara kutu olmasından şikâyetçiydi. Artık skorunuzun neden o seviyede olduğunu net biçimde görebiliyorsunuz." açıklamasını yaptı.',
+        'Özellik, hem masaüstü hem mobil arayüzde ücretsiz olarak kullanılabiliyor. KrediZeka önümüzdeki dönemde bu açıklamaları sesli olarak da sunmayı planlıyor.',
       ],
       en: [
-        'KrediZeka announced that the next-generation AI infrastructure its R&D team has been working on for the past 14 months has officially gone live. The new infrastructure can deliver the same quality risk assessment about 3 times faster than the previous version.',
-        'The company\'s Chief Technology Officer (CTO) emphasized that the new infrastructure is an important step not only in speed but also in energy efficiency. The new model consumes 42% less computing resources per transaction compared to the older version.',
-        'KrediZeka users automatically began benefiting from the new infrastructure. Because the system change was carried out transparently, users do not need to take any additional action.',
-        'The company also announced that it will roll out an explainability module of the AI infrastructure in the next quarter. With this module, users will be able to see, one by one, the factors that drive the decision behind their risk score.',
+        'KrediZeka announced that it has integrated explainable AI (XAI) — one of its most requested features — into the platform. The new "Impact Chart" appears after every risk analysis.',
+        'Computed via SHAP (SHapley Additive exPlanations), the chart shows how much and in which direction factors such as income, credit history, and debt-to-income ratio influence the score, using a horizontal bar chart. Positive impacts are shown in green, negative ones in red.',
+        'A representative from the company\'s product team said: "Users have complained for years that credit decisions are a black box. Now you can clearly see why your score is at that level."',
+        'The feature is available free of charge on both desktop and mobile interfaces. KrediZeka plans to also offer these explanations via voice in the upcoming period.',
       ],
     },
   },
   {
-    id: 'kullanici-deneyimi-odul-2026',
-    date: '24 Nisan 2026',
-    monthLabel: 'Nisan 2026',
-    tag: 'Ödül',
-    tagKey: 'tag_award',
-    tagColor: 'bg-emerald-100 text-emerald-700',
+    id: 'xgboost-model-gecisi-2026',
+    date: '6 Mayıs 2026',
+    monthLabel: 'Mayıs 2026',
+    tag: 'Teknoloji',
+    tagKey: 'tag_technology',
+    tagColor: 'bg-blue-100 text-blue-700',
     title: {
-      tr: 'KrediZeka, Yılın En İyi Kullanıcı Deneyimi Ödülünü Kazandı',
-      en: 'KrediZeka Wins Best User Experience Award of the Year',
+      tr: 'Risk Modeli XGBoost\'a Taşındı: %98.75 Doğruluk',
+      en: 'Risk Model Migrated to XGBoost: 98.75% Accuracy',
     },
     summary: {
-      tr: 'KrediZeka platformu, finans teknolojileri kategorisinde "Yılın En İyi Kullanıcı Deneyimi" ödülünü kazandı. Jürinin değerlendirmesinde sade arayüz ve anlaşılır finansal terminoloji belirleyici oldu.',
-      en: 'The KrediZeka platform won the "Best User Experience of the Year" award in the financial technology category. The jury\'s evaluation was decided by its clean interface and clear financial terminology.',
+      tr: 'KrediZeka, kredi risk skorlama modelini gradient boosting tabanlı XGBoost algoritmasına taşıdı. Yeni model %98.75 doğruluk ve 0.99 ROC AUC değeriyle öncekini geride bıraktı.',
+      en: 'KrediZeka migrated its credit risk scoring model to the gradient boosting-based XGBoost algorithm. The new model surpassed its predecessor with 98.75% accuracy and a 0.99 ROC AUC.',
     },
     content: {
       tr: [
-        'KrediZeka, uluslararası bir kullanıcı deneyimi tasarım yarışmasında "Yılın En İyi Finansal Teknoloji Arayüzü" ödülüne layık görüldü. Ödül töreni, dijital olarak gerçekleştirildi ve KrediZeka tasarım ekibi kendi stüdyosundan canlı yayınla katıldı.',
-        'Jüri değerlendirmesinde özellikle Findeks benzeri renkli skor görselleştirmesinin, kullanıcıların finansal durumlarını ilk bakışta anlamasını kolaylaştırdığı vurgulandı. Ayrıca platformun teknik finans terimlerini sade Türkçe açıklamalarla destekleme yaklaşımı da öne çıktı.',
-        'KrediZeka ürün müdürü, ödülün ekibin temel felsefesini doğruladığını söyledi: "Finansal okuryazarlık bir ayrıcalık değil, herkesin hakkı. Karmaşık bir konuyu anlaşılır kılmak, en az algoritmanın kendisi kadar önemli."',
-        'Şirket önümüzdeki dönemde özellikle erişilebilirlik (WCAG 2.1 AA) standartlarına geçiş için çalışacağını duyurdu. Ekran okuyucu uyumluluğu ve düşük bant genişliğine uygun hafif mod yakında devreye girecek.',
+        'KrediZeka, risk skorlama motorunun kalbindeki makine öğrenmesi modelini yeniledi. Önceki Random Forest tabanlı model, finans sektörünün altın standardı sayılan XGBoost ile değiştirildi.',
+        'Yapılan testlerde yeni model %98.75 doğruluk skoruna ve 0.99 ROC AUC değerine ulaştı. Model, GridSearchCV ile hiperparametre optimizasyonundan geçirilerek en uygun ayarlarla eğitildi.',
+        'Yeni modelin en güçlü öngörü faktörleri sırasıyla kredi geçmişi, yaş ve borç-gelir oranı olarak belirlendi. Bu faktörler, kullanıcılara sunulan açıklamalarda da öne çıkıyor.',
+        'Model güncellemesi kullanıcı deneyimine yansımayan bir altyapı geçişi olarak gerçekleştirildi; mevcut kullanıcıların ek bir işlem yapmasına gerek kalmadı.',
       ],
       en: [
-        'KrediZeka was awarded the "Best Financial Technology Interface of the Year" in an international user experience design competition. The award ceremony was held digitally, and the KrediZeka design team participated live from their own studio.',
-        'In the jury\'s evaluation, it was particularly highlighted that the Findeks-like colored score visualization makes it easier for users to understand their financial situation at a glance. The platform\'s approach to supporting technical financial terms with plain-language explanations also stood out.',
-        'KrediZeka\'s Product Manager said the award validates the team\'s core philosophy: "Financial literacy is not a privilege, it is everyone\'s right. Making a complex topic understandable is at least as important as the algorithm itself."',
-        'The company announced that it will be working on transitioning to accessibility (WCAG 2.1 AA) standards in the coming period. Screen reader compatibility and a lightweight mode suitable for low bandwidth will go live soon.',
+        'KrediZeka renewed the machine learning model at the heart of its risk scoring engine. The previous Random Forest-based model was replaced with XGBoost, considered the gold standard of the finance industry.',
+        'In tests, the new model reached a 98.75% accuracy score and a 0.99 ROC AUC value. The model was trained with optimal settings after hyperparameter optimization via GridSearchCV.',
+        'The strongest predictive factors of the new model were identified as credit history, age, and debt-to-income ratio, respectively. These factors also stand out in the explanations presented to users.',
+        'The model update was carried out as an infrastructure migration not reflected in the user experience; existing users did not need to take any additional action.',
       ],
     },
   },
   {
-    id: 'aciklanabilir-yz-arastirma-2026',
-    date: '7 Nisan 2026',
+    id: 'karanlik-tema-erisim-2026',
+    date: '28 Nisan 2026',
     monthLabel: 'Nisan 2026',
-    tag: 'Araştırma',
-    tagKey: 'tag_research',
-    tagColor: 'bg-violet-100 text-violet-700',
+    tag: 'Topluluk',
+    tagKey: 'tag_community',
+    tagColor: 'bg-amber-100 text-amber-700',
     title: {
-      tr: 'Açıklanabilir Yapay Zekâ Araştırma Raporu Yayımlandı',
-      en: 'Explainable AI Research Report Published',
+      tr: 'Karanlık Tema ve Çift Dil Desteği Kullanıma Sunuldu',
+      en: 'Dark Mode and Bilingual Support Now Available',
     },
     summary: {
-      tr: 'KrediZeka Ar-Ge ekibi, finansal yapay zekâ modellerinin açıklanabilirliği üzerine 80 sayfalık bir araştırma raporu yayımladı. Rapor, sektördeki şeffaflık tartışmalarına katkı sunmayı amaçlıyor.',
-      en: 'The KrediZeka R&D team published an 80-page research report on the explainability of financial AI models. The report aims to contribute to industry-wide transparency discussions.',
+      tr: 'KrediZeka platformu, kullanıcı deneyimini iyileştiren iki büyük güncelleme aldı: göz yormayan karanlık tema ve Türkçe-İngilizce tam çeviri desteği.',
+      en: 'The KrediZeka platform received two major updates that improve user experience: an eye-friendly dark theme and full Turkish-English translation support.',
     },
     content: {
       tr: [
-        'KrediZeka, açıklanabilir yapay zekâ (XAI) alanında yürüttüğü 18 aylık araştırmanın sonuçlarını içeren kapsamlı bir raporu kamuoyu ile paylaştı. Rapor, kredi karar verme süreçlerinde kullanılan ML modellerinin nasıl daha şeffaf hale getirilebileceğine odaklanıyor.',
-        'Araştırma; SHAP, LIME ve KrediZeka\'nın geliştirdiği tescilli bir gradient-based yöntemin karşılaştırmalı analizini içeriyor. KrediZeka yönteminin, kullanıcılara sunulan açıklamaların hem doğruluk hem de anlaşılırlık açısından %23 daha iyi performans gösterdiği belirlendi.',
-        'Rapor herhangi bir ücret talep edilmeden açık erişime sunuldu. Ar-Ge başkanı, "Bu alandaki ilerleme yalnızca açık bilim yaklaşımıyla mümkün. Bulgularımızı paylaşarak topluluğa katkı sunmak istiyoruz." açıklamasını yaptı.',
-        'KrediZeka, bu çalışmadan elde edilen yöntemi 2026 yılı sonuna kadar kendi platformuna entegre etmeyi planlıyor. Kullanıcılar böylece her risk skorunun gerisindeki katkı faktörlerini doğrudan görebilecek.',
+        'KrediZeka, kullanıcılarından gelen geri bildirimler doğrultusunda iki yeni özelliği aynı anda devreye aldı. Artık platform, karanlık tema ile gece kullanımında gözleri yormuyor.',
+        'Karanlık tema, navigasyon çubuğundaki güneş/ay simgesine tek tıkla etkinleştirilebiliyor. Kullanıcının tercihi tarayıcıda saklanıyor ve sonraki ziyaretlerde otomatik uygulanıyor. Sistem ayrıca cihazın işletim sistemi tercihini de algılayabiliyor.',
+        'İkinci büyük yenilik ise çift dil desteği. Platformun tüm arayüzü, haberleri ve hukuki metinleri artık Türkçe ve İngilizce olarak sunuluyor. Dil değişimi anlık olarak gerçekleşiyor.',
+        'Şirket, bu güncellemelerin erişilebilirlik yol haritasının ilk adımı olduğunu, önümüzdeki dönemde ekran okuyucu uyumluluğu üzerinde çalışılacağını belirtti.',
       ],
       en: [
-        'KrediZeka shared a comprehensive report containing the results of its 18-month research on Explainable AI (XAI). The report focuses on how ML models used in credit decision-making processes can be made more transparent.',
-        'The research includes a comparative analysis of SHAP, LIME, and a proprietary gradient-based method developed by KrediZeka. The KrediZeka method was found to perform 23% better in terms of both accuracy and clarity of explanations provided to users.',
-        'The report was made open-access without any charge. The Head of R&D stated: "Progress in this field is only possible with an open-science approach. By sharing our findings, we want to contribute to the community."',
-        'KrediZeka plans to integrate the methodology from this study into its own platform by the end of 2026. Users will thus be able to directly see the contributing factors behind every risk score.',
+        'KrediZeka rolled out two new features simultaneously, in line with feedback from its users. The platform now no longer strains the eyes during nighttime use thanks to the dark theme.',
+        'The dark theme can be activated with a single click on the sun/moon icon in the navigation bar. The user\'s preference is stored in the browser and applied automatically on subsequent visits. The system can also detect the device\'s operating system preference.',
+        'The second major innovation is bilingual support. The platform\'s entire interface, news, and legal texts are now available in both Turkish and English. Language switching happens instantly.',
+        'The company stated that these updates are the first step of its accessibility roadmap, and that screen reader compatibility will be worked on in the upcoming period.',
       ],
     },
   },
   {
-    id: 'kvkk-iso-sertifikalari-2026',
-    date: '15 Mart 2026',
+    id: 'docker-altyapi-2026',
+    date: '14 Nisan 2026',
+    monthLabel: 'Nisan 2026',
+    tag: 'Teknoloji',
+    tagKey: 'tag_technology',
+    tagColor: 'bg-blue-100 text-blue-700',
+    title: {
+      tr: 'Altyapı Konteyner Mimarisine ve PostgreSQL\'e Taşındı',
+      en: 'Infrastructure Migrated to Container Architecture and PostgreSQL',
+    },
+    summary: {
+      tr: 'KrediZeka, tüm sistemini Docker konteyner mimarisine ve kurumsal PostgreSQL veritabanına taşıdı. Bu geçiş, platformun ölçeklenebilirliğini ve kararlılığını önemli ölçüde artırdı.',
+      en: 'KrediZeka migrated its entire system to Docker container architecture and an enterprise-grade PostgreSQL database. This transition significantly improved the platform\'s scalability and stability.',
+    },
+    content: {
+      tr: [
+        'KrediZeka mühendislik ekibi, platformun teknik altyapısında kapsamlı bir modernizasyon gerçekleştirdiğini duyurdu. Sistem artık tamamen konteyner tabanlı (Docker) bir mimaride çalışıyor.',
+        'Veritabanı katmanı da hafif dosya tabanlı bir çözümden, kurumsal düzeyde kararlılık sunan PostgreSQL\'e taşındı. Bu sayede eş zamanlı kullanıcı sayısı arttığında bile performans kaybı yaşanmıyor.',
+        'Yeni mimari, geliştirme ve canlı ortam arasındaki farkları ortadan kaldırarak hataların erken yakalanmasını sağlıyor. Ayrıca yeni özelliklerin yayına alınma süresi belirgin biçimde kısaldı.',
+        'Şirket, bu altyapı yatırımının önümüzdeki dönemde planlanan yüksek trafikli özellikler için sağlam bir temel oluşturduğunu vurguladı.',
+      ],
+      en: [
+        'The KrediZeka engineering team announced a comprehensive modernization of the platform\'s technical infrastructure. The system now runs entirely on a container-based (Docker) architecture.',
+        'The database layer was also migrated from a lightweight file-based solution to PostgreSQL, which offers enterprise-grade stability. As a result, there is no performance loss even when the number of concurrent users increases.',
+        'The new architecture eliminates differences between the development and production environments, enabling errors to be caught early. The time to release new features has also been noticeably shortened.',
+        'The company emphasized that this infrastructure investment establishes a solid foundation for the high-traffic features planned for the upcoming period.',
+      ],
+    },
+  },
+  {
+    id: 'pdf-rapor-ozelligi-2026',
+    date: '25 Mart 2026',
+    monthLabel: 'Mart 2026',
+    tag: 'Topluluk',
+    tagKey: 'tag_community',
+    tagColor: 'bg-amber-100 text-amber-700',
+    title: {
+      tr: 'Risk Analizleri Artık PDF Rapor Olarak İndirilebiliyor',
+      en: 'Risk Analyses Can Now Be Downloaded as PDF Reports',
+    },
+    summary: {
+      tr: 'KrediZeka kullanıcıları, yaptıkları risk analizinin sonucunu skor, grafikler ve yapay zekâ tavsiyesi dahil olmak üzere resmi bir PDF belgesi olarak bilgisayarlarına indirebiliyor.',
+      en: 'KrediZeka users can download the result of their risk analysis — including the score, charts, and AI recommendation — to their computers as an official PDF document.',
+    },
+    content: {
+      tr: [
+        'KrediZeka, analiz sonuçlarının paylaşılmasını ve arşivlenmesini kolaylaştıran yeni bir özelliği hizmete aldı. Kullanıcılar artık risk analizi sonucunu tek tıkla PDF olarak indirebiliyor.',
+        'İndirilen rapor; kredi onaylanma skorunu, borç-gelir ve kredi-gelir oranlarını, finansal dağılım grafiğini ve yapay zekâ tavsiyesini yüksek çözünürlükte içeriyor. Belge A4 formatında düzenleniyor.',
+        'Bu özellik özellikle finansal danışmanlarına veya aile bireylerine durumlarını göstermek isteyen kullanıcılar tarafından talep edilmişti.',
+        'PDF oluşturma işlemi tamamen kullanıcının tarayıcısında gerçekleşiyor; herhangi bir veri sunucuya gönderilmiyor. Bu da gizlilik açısından ek bir güvence sağlıyor.',
+      ],
+      en: [
+        'KrediZeka launched a new feature that makes it easier to share and archive analysis results. Users can now download their risk analysis result as a PDF with a single click.',
+        'The downloaded report includes the credit approval score, debt-to-income and loan-to-income ratios, the financial breakdown chart, and the AI recommendation in high resolution. The document is formatted in A4 size.',
+        'This feature was particularly requested by users who want to show their situation to their financial advisors or family members.',
+        'The PDF generation process takes place entirely in the user\'s browser; no data is sent to the server. This provides an additional guarantee in terms of privacy.',
+      ],
+    },
+  },
+  {
+    id: 'guvenlik-rate-limit-2026',
+    date: '10 Mart 2026',
     monthLabel: 'Mart 2026',
     tag: 'Güvenlik',
     tagKey: 'tag_security',
     tagColor: 'bg-slate-100 text-slate-700',
     title: {
-      tr: 'KVKK ve ISO 27001 Sertifikalarının Yenilenmesi Tamamlandı',
-      en: 'KVKK and ISO 27001 Certifications Successfully Renewed',
+      tr: 'Hesap Güvenliği İçin Yeni Koruma Katmanları Eklendi',
+      en: 'New Protection Layers Added for Account Security',
     },
     summary: {
-      tr: 'KrediZeka, üçüncü taraf bağımsız denetim sonucunda KVKK uyumluluk ve ISO 27001 bilgi güvenliği yönetim sistemi sertifikalarını başarıyla yeniledi.',
-      en: 'Following a third-party independent audit, KrediZeka successfully renewed its KVKK compliance and ISO 27001 information security management system certifications.',
+      tr: 'KrediZeka, kötü niyetli erişim denemelerine karşı IP tabanlı istek sınırlandırması ve gelişmiş şifre koruması içeren yeni güvenlik katmanlarını devreye aldı.',
+      en: 'KrediZeka activated new security layers, including IP-based rate limiting and enhanced password protection against malicious access attempts.',
     },
     content: {
       tr: [
-        'KrediZeka, yıllık zorunlu bağımsız denetimini başarıyla tamamladığını ve KVKK uyumluluk ile ISO 27001 sertifikalarının yenilendiğini duyurdu. Denetim sürecinde altyapı güvenliği, veri saklama politikaları ve olay müdahale prosedürleri detaylı olarak incelendi.',
-        'Denetim sonuç raporunda; Bcrypt tabanlı parola şifreleme, parametreli SQL sorguları ve uçtan uca HTTPS kullanımı gibi güvenlik uygulamaları örnek gösterildi. Ayrıca KrediZeka\'nın olay müdahale süresinin sektör ortalamasının yarısı kadar olduğu belirtildi.',
-        'Şirketin güvenlikten sorumlu yöneticisi, "Bu sertifikalar bizim için sadece birer belge değil; kullanıcılarımıza verdiğimiz sözün doğrulamasıdır. Güvenlik kültürünü tüm ekibimize yaymak için sürekli eğitimlere devam ediyoruz." dedi.',
-        'KrediZeka önümüzdeki dönemde sızma testlerinin (penetration test) sıklığını artıracağını ve bug bounty programını genişleteceğini açıkladı.',
+        'KrediZeka, kullanıcı hesaplarının güvenliğini artırmak amacıyla bir dizi yeni koruma mekanizmasını hizmete aldı. Güncelleme, özellikle otomatik saldırılara karşı platformu güçlendiriyor.',
+        'Yeni sistemde giriş ve kayıt işlemleri için IP tabanlı istek sınırı uygulanıyor. Belirli bir süre içinde fazla sayıda deneme yapılması durumunda işlem geçici olarak engelleniyor — bu, kaba kuvvet (brute-force) saldırılarını etkisiz hale getiriyor.',
+        'Parolalar, endüstri standardı Bcrypt algoritmasıyla benzersiz tuz (salt) eklenerek saklanmaya devam ediyor. Hiçbir parola düz metin olarak hiçbir sistemde yer almıyor.',
+        'Şirketin güvenlik ekibi, bu güncellemelerin yıllık güvenlik yol haritasının parçası olduğunu ve sızma testlerinin düzenli olarak sürdürüleceğini belirtti.',
       ],
       en: [
-        'KrediZeka announced that it has successfully completed its annual mandatory independent audit and renewed its KVKK compliance and ISO 27001 certifications. During the audit, infrastructure security, data retention policies, and incident response procedures were examined in detail.',
-        'The audit report highlighted security practices such as Bcrypt-based password encryption, parameterized SQL queries, and end-to-end HTTPS as exemplary. It was also noted that KrediZeka\'s incident response time is half the industry average.',
-        'The company\'s Head of Security said: "These certifications are not just documents for us; they are the verification of the promise we made to our users. We continue ongoing training to spread the security culture throughout our entire team."',
-        'KrediZeka announced that it will increase the frequency of penetration tests and expand its bug bounty program in the upcoming period.',
+        'KrediZeka activated a series of new protection mechanisms to enhance the security of user accounts. The update strengthens the platform especially against automated attacks.',
+        'In the new system, IP-based request limits are applied for login and registration operations. If too many attempts are made within a certain period, the operation is temporarily blocked — this neutralizes brute-force attacks.',
+        'Passwords continue to be stored with a unique salt added using the industry-standard Bcrypt algorithm. No password is stored as plaintext on any system.',
+        'The company\'s security team stated that these updates are part of the annual security roadmap and that penetration tests will be conducted regularly.',
       ],
     },
   },
   {
-    id: 'sentetik-veri-2026',
-    date: '28 Şubat 2026',
+    id: 'yonetici-paneli-2026',
+    date: '22 Şubat 2026',
     monthLabel: 'Şubat 2026',
     tag: 'Teknoloji',
     tagKey: 'tag_technology',
     tagColor: 'bg-blue-100 text-blue-700',
     title: {
-      tr: 'Sentetik Veri Üretim Motoru Açık Kaynak Olarak Yayımlandı',
-      en: 'Synthetic Data Generation Engine Released as Open Source',
+      tr: 'Kurumsal Yönetici Paneli ve Rol Tabanlı Erişim Devrede',
+      en: 'Enterprise Admin Dashboard and Role-Based Access Now Live',
     },
     summary: {
-      tr: 'KrediZeka, ML modellerini eğitmek için kullandığı sentetik finansal veri üretim motorunun temel sürümünü açık kaynak olarak yayımladı. Geliştiriciler kütüphaneyi GitHub üzerinden kullanmaya başlayabilir.',
-      en: 'KrediZeka released the core version of its synthetic financial data generation engine used to train ML models as open source. Developers can start using the library via GitHub.',
+      tr: 'KrediZeka, platform operasyonlarını izlemek için canlı istatistikler sunan bir yönetici paneli ve rol tabanlı erişim kontrolü (RBAC) mimarisini hayata geçirdi.',
+      en: 'KrediZeka introduced an admin dashboard with live statistics for monitoring platform operations, along with a role-based access control (RBAC) architecture.',
     },
     content: {
       tr: [
-        'KrediZeka, içeride geliştirdiği sentetik finansal veri üretim kütüphanesinin temel sürümünü MIT lisansı ile açık kaynak olarak paylaştı. Kütüphane; gelir, borç ve kredi tutarı gibi finansal alanlarda gerçekçi dağılımlar üretebiliyor.',
-        'Bu motor, finans alanında çalışan araştırmacıların ve eğitim kurumlarının gerçek müşteri verilerine ihtiyaç duymadan model geliştirmesine olanak tanıyor. Üretilen veri seti, hassasiyet açısından eğitim ve test ortamları için uygundur.',
-        'Açık kaynak adımı, KrediZeka\'nın bilim topluluğuna katkı stratejisinin bir parçası. Şirket önümüzdeki bir yıl içinde özellik mühendisliği yardımcı araçlarını da topluluğa açacağını duyurdu.',
-        'GitHub üzerinde yayımlanan repo ilk 48 saatte 1.200\'den fazla yıldız aldı ve geliştirici topluluğu tarafından sıcak karşılandı.',
+        'KrediZeka, platformun operasyonel yönetimini güçlendiren yeni bir yönetici paneli geliştirdiğini duyurdu. Panel, sisteme yalnızca yetkili yönetici hesaplarının erişebildiği özel bir alanda yer alıyor.',
+        'Yönetici paneli; toplam kullanıcı sayısı, son 24 saat ve 7 gün içindeki kayıtlar, profil tamamlama oranları gibi sekiz farklı performans göstergesini (KPI) gerçek zamanlı olarak sunuyor.',
+        'Bu güncellemeyle birlikte platform, rol tabanlı erişim kontrolü (RBAC) mimarisine geçti. Artık kullanıcılar normal kullanıcı ve yönetici olmak üzere farklı yetki seviyelerine sahip olabiliyor.',
+        'Şirket, panelin önümüzdeki sürümlerde analiz hacmi grafikleri ve detaylı kullanıcı segmentasyonu ile genişletileceğini belirtti.',
       ],
       en: [
-        'KrediZeka released the core version of its internally developed synthetic financial data generation library as open source under the MIT license. The library can produce realistic distributions across financial fields such as income, debt, and loan amounts.',
-        'This engine enables researchers and educational institutions working in the financial field to develop models without needing real customer data. The generated dataset is suitable for training and testing environments in terms of sensitivity.',
-        'The open-source move is part of KrediZeka\'s strategy to contribute to the scientific community. The company also announced that it will open its feature engineering helper tools to the community within the next year.',
-        'The repository published on GitHub received more than 1,200 stars in the first 48 hours and was warmly welcomed by the developer community.',
+        'KrediZeka announced the development of a new admin dashboard that strengthens the platform\'s operational management. The panel is located in a dedicated area accessible only to authorized administrator accounts.',
+        'The admin dashboard presents eight different performance indicators (KPIs) in real time, such as total user count, registrations in the last 24 hours and 7 days, and profile completion rates.',
+        'With this update, the platform transitioned to a role-based access control (RBAC) architecture. Users can now have different authorization levels: regular user and administrator.',
+        'The company stated that the panel will be expanded in future versions with analysis volume charts and detailed user segmentation.',
       ],
     },
   },
   {
-    id: 'finans-okuryazarligi-2026',
-    date: '5 Şubat 2026',
+    id: 'kullanici-buyume-2026',
+    date: '8 Şubat 2026',
     monthLabel: 'Şubat 2026',
-    tag: 'Topluluk',
-    tagKey: 'tag_community',
-    tagColor: 'bg-amber-100 text-amber-700',
-    title: {
-      tr: 'Ücretsiz Finansal Okuryazarlık Eğitim Serisi Başlatıldı',
-      en: 'Free Financial Literacy Education Series Launched',
-    },
-    summary: {
-      tr: 'KrediZeka, kullanıcılarına yönelik ücretsiz 8 bölümlük finansal okuryazarlık eğitim serisini hayata geçirdi. Video derslerle bütçe planlama, borç yönetimi ve yatırım temelleri ele alınıyor.',
-      en: 'KrediZeka launched a free 8-part financial literacy education series for its users. Video lessons cover budget planning, debt management, and investment fundamentals.',
-    },
-    content: {
-      tr: [
-        'KrediZeka, kullanıcılarının finansal kararlarını daha bilinçli almasına yardımcı olmak için 8 bölümlük bir video eğitim serisi yayımladı. Seri tamamen ücretsiz ve herkesin erişimine açık.',
-        'Eğitim serisi sırasıyla şu konuları ele alıyor: bütçe planlama temelleri, borç-gelir dengesi, kredi kartı kullanımı, faiz hesaplama, acil durum fonu oluşturma, basit yatırım kavramları, emeklilik planlaması ve dijital güvenlik.',
-        'Şirketin eğitim ekibinden bir yetkili, "Finansal okuryazarlık eksikliği Türkiye\'de hâlâ çok büyük bir sorun. Kullanıcılarımızı sadece bir araçla değil, bilgiyle de güçlendirmek istiyoruz." dedi.',
-        'Eğitim videoları KrediZeka platformuna giriş yapıldıktan sonra Profil sekmesindeki "Eğitim" alanından izlenebiliyor. İlk üç bölüm zaten yayımlandı; geri kalan bölümler haftalık olarak yayımlanmaya devam edecek.',
-      ],
-      en: [
-        'KrediZeka published an 8-part video education series to help its users make more informed financial decisions. The series is completely free and accessible to everyone.',
-        'The education series covers the following topics in order: budget planning fundamentals, debt-to-income balance, credit card usage, interest calculation, emergency fund creation, simple investment concepts, retirement planning, and digital security.',
-        'A representative from the company\'s education team said: "Lack of financial literacy is still a huge problem in Turkey. We want to empower our users not only with a tool but also with knowledge."',
-        'The educational videos can be watched from the "Education" area in the Profile tab after logging in to the KrediZeka platform. The first three episodes have already been published; the remaining episodes will continue to be released weekly.',
-      ],
-    },
-  },
-  {
-    id: 'random-forest-v2-2026',
-    date: '18 Ocak 2026',
-    monthLabel: 'Ocak 2026',
-    tag: 'Teknoloji',
-    tagKey: 'tag_technology',
-    tagColor: 'bg-blue-100 text-blue-700',
-    title: {
-      tr: 'Random Forest Modeli v2 Yayımlandı: %98.7 Doğruluk',
-      en: 'Random Forest Model v2 Released: 98.7% Accuracy',
-    },
-    summary: {
-      tr: 'KrediZeka risk skorlama modelinin ikinci sürümü hizmete girdi. Yeni model, önceki sürüme göre 1.2 puan daha yüksek doğrulukla çalışıyor.',
-      en: 'The second version of KrediZeka\'s risk scoring model went live. The new model runs with 1.2 points higher accuracy compared to the previous version.',
-    },
-    content: {
-      tr: [
-        'KrediZeka, kredi onaylanma olasılığı tahmin modelinin ikinci nesil sürümünü duyurdu. Random Forest tabanlı yeni model, %98.7 doğruluk skoru ile öncekine göre belirgin bir iyileşme sundu.',
-        'Model bu sürümle birlikte; ağaç sayısı (200\'den 350\'ye), derinlik optimizasyonu ve dengesizlik düzeltmesi (class balancing) gibi alanlarda iyileştirildi. Aynı zamanda eğitim veri seti 5.000 örnekten 12.500 örneğe genişletildi.',
-        'Yeni model ayrıca uç (edge) finansal senaryolarda — özellikle çok yüksek borç-gelir oranına sahip kullanıcılarda — daha tutarlı tahminler sunabiliyor.',
-        'Şirket, model yenilenmesinin kullanıcı deneyimine yansımayan bir altyapı güncellemesi olduğunu vurguladı. Geliştirici Swagger dokümantasyonu da güncel sürüme uyarlanmış durumda.',
-      ],
-      en: [
-        'KrediZeka announced the second-generation version of its credit approval probability prediction model. The new Random Forest-based model delivered a noticeable improvement over the previous one, achieving a 98.7% accuracy score.',
-        'With this version, the model has been improved in areas such as tree count (from 200 to 350), depth optimization, and class balancing. The training dataset was also expanded from 5,000 examples to 12,500 examples.',
-        'The new model can also deliver more consistent predictions in edge financial scenarios — especially for users with very high debt-to-income ratios.',
-        'The company emphasized that the model renewal is an infrastructure update that is not reflected in the user experience. The developer Swagger documentation has also been adapted to the current version.',
-      ],
-    },
-  },
-  {
-    id: 'kullanici-100bin-2026',
-    date: '3 Ocak 2026',
-    monthLabel: 'Ocak 2026',
     tag: 'Büyüme',
     tagKey: 'tag_growth',
     tagColor: 'bg-pink-100 text-pink-700',
     title: {
-      tr: 'KrediZeka 100.000 Kullanıcı Eşiğini Aştı',
-      en: 'KrediZeka Surpasses 100,000 Users',
+      tr: 'KrediZeka Kullanıcı Tabanını Hızla Büyütüyor',
+      en: 'KrediZeka Rapidly Grows Its User Base',
     },
     summary: {
-      tr: 'KrediZeka, hizmete girişinin 24. ayında kayıtlı kullanıcı sayısı 100.000 eşiğini geçti. Şirket, ilk 100 bin kullanıcısına teşekkür kampanyası başlattı.',
-      en: 'In the 24th month of its launch, KrediZeka exceeded the 100,000 registered user threshold. The company launched a thank-you campaign for its first 100 thousand users.',
+      tr: 'KrediZeka, hizmete girişinden bu yana istikrarlı bir büyüme yakaladığını ve yapılan toplam risk analizi sayısının milyonlarla ifade edilen seviyelere ulaştığını açıkladı.',
+      en: 'KrediZeka announced that it has achieved steady growth since its launch, with the total number of risk analyses performed reaching levels expressed in millions.',
     },
     content: {
       tr: [
-        'KrediZeka, kayıtlı kullanıcı sayısının 100.000\'i aştığını duyurdu. Bu rakam, platformun hizmete girişinin yalnızca 24. ayında ulaşıldı ve şirketin büyüme hızını gösteren önemli bir kilometre taşı olarak değerlendirildi.',
-        'Kullanıcı sayısının yanı sıra yapılan toplam analiz adedi de 2.4 milyona ulaştı. Bir kullanıcı ortalamada 24 farklı analiz senaryosu deneyerek finansal durumunu çeşitli açılardan değerlendiriyor.',
-        'KrediZeka, ilk 100 bin kullanıcısına teşekkür amacıyla "Erken Üye Rozeti" kampanyası başlattı. Bu kullanıcılar profil sayfalarında özel bir rozet ile öne çıkarılıyor.',
-        'Şirketin CEO\'su, hedefin 2027 sonuna kadar 500 bin aktif kullanıcı seviyesine ulaşmak olduğunu açıkladı. Bu büyüme stratejisi kapsamında 2026 yılı içinde mobil uyumlu (responsive) web platformu daha da geliştirilecek.',
+        'KrediZeka, kullanıcı tabanının düzenli olarak büyüdüğünü ve platformun finansal teknoloji alanında giderek daha fazla kişi tarafından tercih edildiğini duyurdu.',
+        'Şirket verilerine göre kullanıcılar, kredi başvurusu yapmadan önce platformu bir ön değerlendirme aracı olarak kullanıyor. Bir kullanıcı ortalamada birden fazla senaryo deneyerek farklı kredi tutarları için risklerini karşılaştırıyor.',
+        'Büyümenin ardındaki en önemli etkenlerden biri, kullanıcıların platformu çevrelerine tavsiye etmesi. Şirket, organik büyümenin reklam harcamalarından daha güçlü bir kanal olduğunu vurguladı.',
+        'KrediZeka, artan kullanıcı ilgisine paralel olarak altyapı kapasitesini önceden genişlettiğini ve hizmet kalitesinde herhangi bir düşüş yaşanmadığını belirtti.',
       ],
       en: [
-        'KrediZeka announced that its registered user count exceeded 100,000. This figure was reached in just the 24th month since the platform went live and was hailed as a significant milestone showing the company\'s growth pace.',
-        'In addition to the user count, the total number of analyses performed reached 2.4 million. A user runs an average of 24 different analysis scenarios to evaluate their financial situation from various angles.',
-        'KrediZeka launched the "Early Member Badge" campaign to thank its first 100,000 users. These users are highlighted with a special badge on their profile pages.',
-        'The company\'s CEO stated that the goal is to reach 500,000 active users by the end of 2027. As part of this growth strategy, the responsive web platform will be further developed in 2026.',
+        'KrediZeka announced that its user base is growing steadily and that the platform is increasingly preferred by more people in the field of financial technology.',
+        'According to company data, users use the platform as a pre-assessment tool before applying for a loan. On average, a user tries multiple scenarios, comparing their risks for different loan amounts.',
+        'One of the most important factors behind the growth is users recommending the platform to those around them. The company emphasized that organic growth is a stronger channel than advertising spend.',
+        'KrediZeka stated that it has expanded its infrastructure capacity in advance in parallel with the increasing user interest, and that there has been no decline in service quality.',
       ],
     },
   },
 ];
 
 /**
- * Bir haber objesinin tüm çift dilli alanlarını seçili dile göre düzleştirir.
- * Tüketici bileşenleri (Modal, kart) artık item.title yerine localized.title kullanır.
- *
- * @param {Object} item - news dizisinden bir öğe
- * @param {string} lang - 'tr' veya 'en'
- * @returns {Object} - Düzleştirilmiş haber objesi
+ * Bir haber objesinin çift dilli alanlarını seçili dile göre düzleştirir.
  */
 export function localizeNews(item, lang = 'tr') {
   if (!item) return null;

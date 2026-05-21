@@ -11,6 +11,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { UserPlus, User, CreditCard, Mail, Phone, Lock, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PasswordChecklist, { isStrongPassword } from '../components/PasswordChecklist';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -53,7 +54,7 @@ export default function RegisterPage() {
     if (form.tc_no.length !== 11) return toast.error(t('register.validation_tc_length'));
     if (form.tc_no.startsWith('0')) return toast.error(t('register.validation_tc_zero'));
     if (form.phone.length !== 11) return toast.error(t('register.validation_phone'));
-    if (form.password.length < 6) return toast.error(t('register.validation_password'));
+    if (!isStrongPassword(form.password)) return toast.error(t('password_rules.weak_error'));
 
     setLoading(true);
     try {
@@ -129,6 +130,7 @@ export default function RegisterPage() {
                 <Lock className="w-4 h-4 text-primary-500" /> {t('register.password_label')}
               </label>
               <input type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} placeholder={t('register.password_placeholder')} className="input-field" required />
+              <PasswordChecklist password={form.password} />
             </div>
 
             <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60">

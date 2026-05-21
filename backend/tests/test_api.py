@@ -60,7 +60,7 @@ class TestRegister:
             "full_name": "Ahmet Yılmaz",
             "email": "ahmet.yilmaz@kredizeka.com",
             "phone": "05551112233",
-            "password": "guvenli123",
+            "password": "Guvenli123!",
         })
         assert response.status_code == 200
         data = response.json()
@@ -77,7 +77,7 @@ class TestRegister:
             "full_name": "Zeynep Kaya",
             "email": "zeynep.kaya@kredizeka.com",
             "phone": "05559998877",
-            "password": "parola456",
+            "password": "Parola456!",
         }
         # İlk kayıt → başarılı
         first = client.post("/api/register", json=user)
@@ -98,7 +98,7 @@ class TestRegister:
             "full_name": "Hatalı Kullanıcı",
             "email": "hatali@kredizeka.com",
             "phone": "05551234567",
-            "password": "parola123",
+            "password": "Parola123!",
         })
         assert response.status_code == 422
 
@@ -111,7 +111,7 @@ class TestRegister:
             "full_name": "Sıfır Kullanıcı",
             "email": "sifir@kredizeka.com",
             "phone": "05551234567",
-            "password": "parola123",
+            "password": "Parola123!",
         })
         assert response.status_code == 422
 
@@ -139,7 +139,22 @@ class TestRegister:
             "full_name": "Gecersiz Eposta",
             "email": "bu-bir-eposta-degil",  # '@' yok — geçersiz format
             "phone": "05551234567",
-            "password": "parola123",
+            "password": "Parola123!",
+        })
+        assert response.status_code == 422
+
+    def test_register_weak_password_returns_422(self, client, unique_tc):
+        """
+        Güçlü parola kriterlerini sağlamayan bir şifre ile kayıt reddedilmeli.
+        'alfabeta123' yeterince uzun olsa da büyük harf ve özel karakter
+        içermediğinden validasyon HTTP 422 döndürür.
+        """
+        response = client.post("/api/register", json={
+            "tc_no": unique_tc,
+            "full_name": "Zayif Parola",
+            "email": "zayif.parola@kredizeka.com",
+            "phone": "05551234567",
+            "password": "alfabeta123",  # büyük harf ve özel karakter yok
         })
         assert response.status_code == 422
 
@@ -467,7 +482,7 @@ class TestPasswordReset:
         """Geçersiz bir jeton ile şifre sıfırlama HTTP 400 dönmeli."""
         response = client.post("/api/reset-password", json={
             "token": "bu-gecersiz-bir-jeton-xyz",
-            "new_password": "yeniSifre123",
+            "new_password": "YeniSifre123!",
         })
         assert response.status_code == 400
 
@@ -488,7 +503,7 @@ class TestPasswordReset:
             "full_name": "Akis Testi",
             "email": email,
             "phone": "05551234567",
-            "password": "eskiSifre1",
+            "password": "EskiSifre1!",
         })
         assert reg.status_code == 200
 
@@ -508,27 +523,27 @@ class TestPasswordReset:
         # 4) Jeton ile yeni şifre belirle
         reset = client.post("/api/reset-password", json={
             "token": token_value,
-            "new_password": "yeniSifre2",
+            "new_password": "YeniSifre2!",
         })
         assert reset.status_code == 200
 
         # 5) Eski şifre artık çalışmamalı
         old_login = client.post("/api/login", json={
             "tc_no": unique_tc,
-            "password": "eskiSifre1",
+            "password": "EskiSifre1!",
         })
         assert old_login.status_code == 401
 
         # 6) Yeni şifre ile giriş başarılı olmalı
         new_login = client.post("/api/login", json={
             "tc_no": unique_tc,
-            "password": "yeniSifre2",
+            "password": "YeniSifre2!",
         })
         assert new_login.status_code == 200
 
         # 7) Aynı jeton ikinci kez kullanılamamalı (tek kullanımlık)
         reuse = client.post("/api/reset-password", json={
             "token": token_value,
-            "new_password": "baskaSifre3",
+            "new_password": "BaskaSifre3!",
         })
         assert reuse.status_code == 400

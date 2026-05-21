@@ -211,6 +211,15 @@
     "success_toast": "Your password has been updated successfully! You can now log in.",
     "back_to_login": "Back to login"
   },
+  "password_rules": {
+    "title": "Password must meet these rules:",
+    "length": "At least 8 characters",
+    "uppercase": "At least one uppercase letter (A-Z)",
+    "lowercase": "At least one lowercase letter (a-z)",
+    "digit": "At least one digit (0-9)",
+    "special": "At least one special character (!@#$...)",
+    "weak_error": "Your password must meet all security criteria."
+  },
   "profile": {
     "member_badge": "KrediZeka Member",
     "personal_info": "Personal Information",

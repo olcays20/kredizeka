@@ -106,7 +106,7 @@ def registered_user(client, unique_tc):
         "full_name": "Test Kullanıcı",
         "email": "test.kullanici@kredizeka.com",
         "phone": "05551234567",
-        "password": "test1234",
+        "password": "Test1234!",
     }
     response = client.post("/api/register", json=user_data)
     # Kaydın başarılı olduğunu doğrula (fixture kurulumu güvencesi)

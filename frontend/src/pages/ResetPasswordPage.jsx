@@ -18,6 +18,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Lock, ShieldCheck, ArrowRight, ArrowLeft, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PasswordChecklist, { isStrongPassword } from '../components/PasswordChecklist';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -36,8 +37,8 @@ export default function ResetPasswordPage() {
     e.preventDefault();
 
     // İstemci tarafı doğrulamalar
-    if (form.password.length < 6) {
-      return toast.error(t('reset_password.validation_length'));
+    if (!isStrongPassword(form.password)) {
+      return toast.error(t('password_rules.weak_error'));
     }
     if (form.password !== form.confirm) {
       return toast.error(t('reset_password.validation_match'));
@@ -115,6 +116,7 @@ export default function ResetPasswordPage() {
                     className="input-field"
                     required
                   />
+                  <PasswordChecklist password={form.password} />
                 </div>
 
                 <div>

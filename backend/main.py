@@ -199,12 +199,42 @@ def _legacy_migrate() -> None:
 _EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
+def _validate_password_strength(v: str) -> str:
+    """
+    Şifrenin "güçlü parola" kriterlerini sağladığını doğrular.
+
+    Kriterler:
+      • En az 8 karakter
+      • En az bir BÜYÜK harf
+      • En az bir küçük harf
+      • En az bir rakam
+      • En az bir özel karakter (harf, rakam ve boşluk dışındaki herhangi bir karakter)
+
+    Kriterlerden biri bile sağlanmazsa, hangi kuralın ihlal edildiğini açıkça
+    belirten bir ValueError fırlatır. Bu fonksiyon hem kayıt (register) hem de
+    şifre sıfırlama (reset-password) akışlarında ortak olarak kullanılır.
+    """
+    if len(v) < 8:
+        raise ValueError("Şifre en az 8 karakter olmalıdır.")
+    if not any(c.isupper() for c in v):
+        raise ValueError("Şifre en az bir büyük harf içermelidir.")
+    if not any(c.islower() for c in v):
+        raise ValueError("Şifre en az bir küçük harf içermelidir.")
+    if not any(c.isdigit() for c in v):
+        raise ValueError("Şifre en az bir rakam içermelidir.")
+    if not any((not c.isalnum()) and (not c.isspace()) for c in v):
+        raise ValueError(
+            "Şifre en az bir özel karakter içermelidir (örn. ! @ # $ %)."
+        )
+    return v
+
+
 class RegisterRequest(BaseModel):
     tc_no: str = Field(..., min_length=11, max_length=11)
     full_name: str = Field(..., min_length=2, max_length=100)
     email: str = Field(..., min_length=5, max_length=255)
     phone: str = Field(..., min_length=11, max_length=11)
-    password: str = Field(..., min_length=6, max_length=100)
+    password: str = Field(..., max_length=100)
 
     @field_validator("tc_no")
     @classmethod
@@ -232,6 +262,12 @@ class RegisterRequest(BaseModel):
             raise ValueError("Telefon numarası yalnızca rakamlardan oluşmalıdır.")
         return v
 
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        """Kayıt sırasında güçlü parola kriterlerini uygular."""
+        return _validate_password_strength(v)
+
 
 class LoginRequest(BaseModel):
     tc_no: str = Field(..., min_length=11, max_length=11)
@@ -256,7 +292,13 @@ class ResetPasswordRequest(BaseModel):
     new_password : Kullanıcının belirlediği yeni şifre (min. 6 karakter).
     """
     token: str = Field(..., min_length=10, max_length=255)
-    new_password: str = Field(..., min_length=6, max_length=100)
+    new_password: str = Field(..., max_length=100)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        """Şifre sıfırlama sırasında güçlü parola kriterlerini uygular."""
+        return _validate_password_strength(v)
 
 
 class ProfileUpdateRequest(BaseModel):

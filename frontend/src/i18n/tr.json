@@ -211,6 +211,15 @@
     "success_toast": "Şifreniz başarıyla güncellendi! Giriş yapabilirsiniz.",
     "back_to_login": "Giriş sayfasına dön"
   },
+  "password_rules": {
+    "title": "Şifre şu kuralları sağlamalıdır:",
+    "length": "En az 8 karakter",
+    "uppercase": "En az bir büyük harf (A-Z)",
+    "lowercase": "En az bir küçük harf (a-z)",
+    "digit": "En az bir rakam (0-9)",
+    "special": "En az bir özel karakter (!@#$...)",
+    "weak_error": "Şifreniz tüm güvenlik kriterlerini karşılamalıdır."
+  },
   "profile": {
     "member_badge": "KrediZeka Üyesi",
     "personal_info": "Kişisel Bilgiler",

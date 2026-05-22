@@ -12,6 +12,8 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![XGBoost](https://img.shields.io/badge/XGBoost-2.0-FF6F00?style=for-the-badge)](https://xgboost.ai)
 [![SHAP](https://img.shields.io/badge/SHAP-0.45-E91E63?style=for-the-badge)](https://shap.readthedocs.io)
+[![Gemini](https://img.shields.io/badge/Gemini-AI_Sohbet-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)](https://ai.google.dev)
+[![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
@@ -29,7 +31,7 @@
 
 ## 🇹🇷 Türkçe
 
-> Açıklanabilir yapay zekâ (XAI), PostgreSQL kalıcı veri katmanı, Docker konteyner mimarisi ve çift dil desteğiyle uçtan uca geliştirilmiş bir akademik portföy projesi.
+> Açıklanabilir yapay zekâ (XAI), üretken yapay zekâ sohbet asistanı, PostgreSQL kalıcı veri katmanı, PWA desteği, Redis önbellekleme, Docker konteyner mimarisi ve çift dil desteğiyle uçtan uca geliştirilmiş bir akademik portföy projesi.
 
 ### İçindekiler
 
@@ -75,8 +77,14 @@ Geleneksel kredi değerlendirme süreçleri opak ve kullanıcıya kapalıdır. K
 | **Karanlık Tema** | Tailwind class-based dark mode, sistem tercihi algılama |
 | **PDF Rapor** | Analiz sonucunu yüksek çözünürlüklü A4 belge olarak indirme |
 | **Veri Görselleştirme** | Recharts ile pasta grafiği, bar grafiği ve SHAP etki grafiği |
-| **Güvenli Kimlik Doğrulama** | Bcrypt ile tuzlu hash; parolalar asla düz metin saklanmaz |
-| **Profil Yönetimi** | Profil fotoğrafı yükleme, meslek ve adres güncelleme |
+| **ZekaBot — Yapay Zekâ Asistanı** | Google Gemini API'sine bağlı 7/24 finansal sohbet asistanı; anahtar yoksa anahtar kelime tabanlı yedeğe düşer |
+| **PWA (Progressive Web App)** | Service Worker + Web App Manifest ile telefona kurulabilen uygulama |
+| **E-posta Doğrulama** | Kayıt sonrası Brevo ile gönderilen bağlantı; e-posta doğrulanmadan giriş yapılamaz |
+| **Şifre Sıfırlama** | "Şifremi Unuttum" akışı — tek kullanımlık, 1 saat geçerli güvenli token |
+| **Redis Önbellekleme** | fastapi-cache2 ile sık erişilen veriler önbelleklenir (Redis yoksa bellek-içi yedek) |
+| **Yönetici Kullanıcı Yönetimi** | Admin panelinden kullanıcı listeleme ve silme |
+| **Güvenli Kimlik Doğrulama** | Bcrypt ile tuzlu hash; güçlü parola politikası (8+ karakter, karma karakter seti) |
+| **Profil Yönetimi** | Profil fotoğrafı yükleme; e-posta ve şifre değiştirme (mevcut şifre doğrulamalı) |
 
 #### İnteraktif Finansal Modül Mimarisi
 
@@ -224,6 +232,45 @@ Taraflarla Paylaşım, Çerezler Politikası, KVKK Madde 11 Hakları. Gerçekçi
 terminoloji kullan. Hem Türkçe hem İngilizce versiyonları üret.
 ```
 
+#### Mimari & Kurumsal Özellik Promptları
+
+Rol tabanlı (persona) prompt tekniğiyle, projenin kurumsal özelliklerini adım adım geliştirirken kullandığım promptlar:
+
+**Kurumsal özellik entegrasyonu (Redis · PWA · Sohbet Asistanı):**
+```
+Sen projemizin Baş Mimarı ve Kıdemli DevOps Uzmanısın. KrediZeka platformuna şu
+kurumsal özellikleri entegre et: Redis önbellekleme (fastapi-cache2 ile; Redis
+erişilemezse bellek-içi yedeğe düşsün), PWA (vite-plugin-pwa ile Service Worker +
+Web App Manifest) ve finans terimlerini anlayan bir sohbet asistanı. Her şey
+gerçek üretim (production) mimarisine uygun olsun; kodları kısaltmadan tam ve
+çalışır biçimde üret.
+```
+
+**Üretken yapay zekâ entegrasyonu (Google Gemini):**
+```
+ZekaBot sohbet asistanını gerçek Google Gemini API'sine bağla. API anahtarı
+yalnızca ortam değişkeninden (GEMINI_API_KEY) okunsun, koda asla yazılmasın.
+Anahtar tanımlı değilse veya çağrı başarısız olursa anahtar kelime tabanlı yedek
+mantık devreye girsin (graceful degradation) — uygulama her durumda çalışmaya
+devam etsin.
+```
+
+**Şifre sıfırlama akışı:**
+```
+"Şifremi Unuttum" akışını uçtan uca kur. Kullanıcı e-postasını girsin; sistem
+kriptografik olarak güvenli, tek kullanımlık ve 1 saat geçerli bir token üretip
+e-posta ile sıfırlama bağlantısı göndersin. Güvenlik gereği e-posta kayıtlı olsun
+ya da olmasın aynı yanıt dönsün (user enumeration koruması).
+```
+
+**OWASP Top 10 güvenlik denetimi:**
+```
+Sen Kıdemli Siber Güvenlik Uzmanısın (Penetration Tester). Kod tabanını OWASP
+Top 10 standartlarına göre denetle: CORS yapılandırması, hardcoded secret'lar,
+SQL injection, XSS (dangerouslySetInnerHTML) ve IDOR / yetkisiz kaynak erişimi
+açıkları. Tespit ettiğin her açığı kapat ve neyi neden düzelttiğini açıkla.
+```
+
 ---
 
 ### Kurulum ve Çalıştırma
@@ -250,6 +297,19 @@ Erişim noktaları:
 - **API Dokümantasyonu (Swagger)** → http://localhost:8000/docs
 
 İlk açılışta backend, veritabanı şemasını otomatik oluşturur. Varsayılan yönetici hesabı, `.env` dosyasındaki `DEFAULT_ADMIN_*` değişkenleri kullanılarak otomatik tanımlanır.
+
+#### Önemli Ortam Değişkenleri
+
+| Değişken | Açıklama |
+|---|---|
+| `DATABASE_URL` | PostgreSQL bağlantı adresi (tanımlı değilse SQLite'a düşer) |
+| `CORS_ORIGINS` | İzinli origin listesi (virgülle ayrılır) |
+| `GEMINI_API_KEY` | ZekaBot için Google Gemini anahtarı |
+| `BREVO_API_KEY` | E-posta gönderimi için Brevo anahtarı |
+| `FRONTEND_URL` | E-posta bağlantılarının yönlendiği frontend adresi |
+| `DEFAULT_ADMIN_PASSWORD` | İlk yönetici parolası |
+
+> Tüm anahtarlar **opsiyoneldir** — tanımlı değilse ilgili özellik güvenli bir yedek davranışa geçer (örn. Gemini yoksa anahtar kelime tabanlı asistan, Brevo yoksa e-posta simülasyonu, admin parolası yoksa rastgele üretim).
 
 #### Yöntem 2: Yerel Geliştirme (Docker'sız)
 
@@ -388,7 +448,7 @@ ML Inference Servisi (ayrı GPU destekli endpoint)
 
 ## 🇬🇧 English
 
-> An academic portfolio project built end-to-end with Explainable AI (XAI), a persistent PostgreSQL data layer, Docker container architecture, and full bilingual support.
+> An academic portfolio project built end-to-end with Explainable AI (XAI), a generative-AI chat assistant, a persistent PostgreSQL data layer, PWA support, Redis caching, Docker container architecture, and full bilingual support.
 
 ### Table of Contents
 
@@ -434,8 +494,14 @@ Traditional credit evaluation processes are opaque and inaccessible to end users
 | **Dark Mode** | Tailwind class-based dark theme with system preference detection |
 | **PDF Report** | Download analysis result as a high-resolution A4 document |
 | **Data Visualization** | Pie chart, bar chart, and SHAP impact chart via Recharts |
-| **Secure Authentication** | Bcrypt salted hashing; passwords never stored as plaintext |
-| **Profile Management** | Profile picture upload, occupation and address updates |
+| **ZekaBot — AI Assistant** | 24/7 financial chat assistant powered by the Google Gemini API; falls back to keyword matching when no key is set |
+| **PWA (Progressive Web App)** | Installable on phones via Service Worker + Web App Manifest |
+| **Email Verification** | Verification link sent via Brevo after sign-up; login is blocked until verified |
+| **Password Reset** | "Forgot Password" flow — single-use token valid for 1 hour |
+| **Redis Caching** | Frequently accessed data cached via fastapi-cache2 (in-memory fallback when Redis is unavailable) |
+| **Admin User Management** | List and delete users from the admin dashboard |
+| **Secure Authentication** | Bcrypt salted hashing; strong password policy (8+ chars, mixed character set) |
+| **Profile Management** | Profile picture upload; email and password change (current password required) |
 
 #### Interactive Financial Module Architecture
 
@@ -577,6 +643,44 @@ Security, Third-Party Sharing, Cookie Policy, KVKK Article 11 Rights. Use
 realistic legal terminology. Produce both Turkish and English versions.
 ```
 
+#### Architecture & Enterprise Feature Prompts
+
+Prompts used to build the project's enterprise features step by step, using the role-based (persona) prompting technique:
+
+**Enterprise feature integration (Redis · PWA · Chat Assistant):**
+```
+You are the Lead Architect and Senior DevOps Engineer of our project. Integrate
+the following enterprise features into the KrediZeka platform: Redis caching (via
+fastapi-cache2; fall back to an in-memory backend if Redis is unreachable), PWA
+(Service Worker + Web App Manifest via vite-plugin-pwa), and a chat assistant
+that understands financial terms. Everything must follow real production
+architecture; produce complete, working code without abbreviating.
+```
+
+**Generative AI integration (Google Gemini):**
+```
+Connect the ZekaBot chat assistant to the real Google Gemini API. The API key
+must only be read from an environment variable (GEMINI_API_KEY), never written
+into the code. If the key is not set or the call fails, a keyword-based fallback
+must kick in (graceful degradation) — the app must keep working in all cases.
+```
+
+**Password reset flow:**
+```
+Build the "Forgot Password" flow end to end. The user enters their email; the
+system generates a cryptographically secure, single-use token valid for 1 hour
+and emails a reset link. For security, return the same response whether or not
+the email is registered (user enumeration protection).
+```
+
+**OWASP Top 10 security audit:**
+```
+You are a Senior Cybersecurity Expert (Penetration Tester). Audit the codebase
+against OWASP Top 10 standards: CORS configuration, hardcoded secrets, SQL
+injection, XSS (dangerouslySetInnerHTML), and IDOR / broken access control.
+Fix every vulnerability you find and explain what you fixed and why.
+```
+
 ---
 
 ### Installation & Running
@@ -603,6 +707,19 @@ Access points:
 - **API Documentation (Swagger)** → http://localhost:8000/docs
 
 On first startup, the backend automatically creates the database schema. The default administrator account is automatically defined using the `DEFAULT_ADMIN_*` variables in the `.env` file.
+
+#### Key Environment Variables
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string (falls back to SQLite if unset) |
+| `CORS_ORIGINS` | Comma-separated list of allowed origins |
+| `GEMINI_API_KEY` | Google Gemini key for ZekaBot |
+| `BREVO_API_KEY` | Brevo key for sending email |
+| `FRONTEND_URL` | Frontend address that email links point to |
+| `DEFAULT_ADMIN_PASSWORD` | Initial administrator password |
+
+> All keys are **optional** — when unset, the related feature degrades gracefully (e.g. keyword-based assistant without Gemini, email simulation without Brevo, randomly generated admin password if none is provided).
 
 #### Method 2: Local Development (without Docker)
 
@@ -735,12 +852,19 @@ ML Inference Service (separate GPU-backed endpoint)
 
 ## 🔒 Güvenlik / Security
 
+Proje, OWASP Top 10 standartlarına göre güvenlik denetiminden geçirilmiştir. / The project has been audited against the OWASP Top 10.
+
 - **Bcrypt** — Parolalar tuzlu hash olarak saklanır, asla düz metin / Passwords stored as salted hashes, never plaintext
+- **Güçlü Parola Politikası** — Min. 8 karakter; büyük/küçük harf, rakam ve özel karakter / Min. 8 chars with mixed character set
+- **E-posta Doğrulama** — Hesaplar tek kullanımlık, süreli token ile doğrulanır / Accounts verified via single-use, time-limited tokens
+- **IDOR Koruması** — Sahiplik denetimi: kullanıcı yalnızca kendi kaynaklarına erişir / Ownership checks — users access only their own resources
 - **Parameterized Queries** — SQLAlchemy ORM ile SQL enjeksiyonuna karşı koruma / Protected against SQL injection
+- **XSS Koruması** — `dangerouslySetInnerHTML` kullanılmaz; React varsayılan escaping / No `dangerouslySetInnerHTML`; React default escaping
 - **Pydantic Doğrulama** — Tüm API girdileri tip ve format doğrulamasından geçer / All API inputs are type and format validated
-- **Rate Limiting** — IP tabanlı brute-force koruması / IP-based brute-force protection
-- **RBAC** — Rol tabanlı erişim kontrolü (`ProtectedRoute` + `AdminRoute`) / Role-based access control
-- **CORS** — `CORS_ORIGINS` ortam değişkeni ile yapılandırılabilir / Configurable via environment variable
+- **Rate Limiting** — IP tabanlı brute-force koruması (slowapi) / IP-based brute-force protection
+- **RBAC** — Rol tabanlı erişim kontrolü (`ProtectedRoute` + `AdminRoute` + `require_admin`) / Role-based access control
+- **CORS** — Yalnızca güvenilen origin'lere izin verilir / Restricted to trusted origins only
+- **Secret Yönetimi** — API anahtarları yalnızca ortam değişkenlerinde tutulur, koda yazılmaz / API keys kept only in environment variables, never in code
 
 ---
 

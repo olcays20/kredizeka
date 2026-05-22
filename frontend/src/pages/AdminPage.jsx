@@ -12,7 +12,7 @@ import { useAuth } from '../hooks/useAuth';
 import {
   LayoutDashboard, Users, Shield, UserCircle, ImageIcon,
   ClipboardCheck, Clock, TrendingUp, RefreshCw, Calendar,
-  Trash2, AlertTriangle, X,
+  Trash2, AlertTriangle, X, ShieldCheck, ShieldAlert,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -236,6 +236,9 @@ export default function AdminPage() {
                       {t('admin.table_tc')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                      {t('admin.table_email')}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       {t('admin.table_role')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
@@ -263,6 +266,22 @@ export default function AdminPage() {
                       </td>
                       <td className="px-6 py-4 text-sm font-mono text-slate-500 dark:text-slate-400">
                         {maskTc(u.tc_no)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-slate-600 dark:text-slate-300">
+                          {u.email || '—'}
+                        </div>
+                        {u.email && (
+                          u.email_verified ? (
+                            <span className="inline-flex items-center gap-1 mt-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                              <ShieldCheck className="w-3 h-3" /> {t('admin.verified')}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 mt-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                              <ShieldAlert className="w-3 h-3" /> {t('admin.unverified')}
+                            </span>
+                          )
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         {u.is_admin ? (

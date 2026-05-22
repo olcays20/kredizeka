@@ -123,7 +123,10 @@
     "delete_confirm_desc": "{{name}} adlı kullanıcıyı kalıcı olarak silmek üzeresiniz. Kullanıcının tüm analiz kayıtları da silinir ve bu işlem geri alınamaz.",
     "delete_confirm_button": "Evet, Sil",
     "deleting": "Siliniyor...",
-    "cancel": "İptal"
+    "cancel": "İptal",
+    "table_email": "E-posta",
+    "verified": "Doğrulanmış",
+    "unverified": "Doğrulanmamış"
   },
   "footer": {
     "tagline": "Yapay zeka destekli finansal risk analizi ile kredi kararlarınızda güvenilir bir rehber. Verileriniz güvende, kararlarınız bilinçli.",

@@ -116,6 +116,24 @@ class Settings(BaseSettings):
             return v.replace("postgresql://", "postgresql+psycopg2://", 1)
         return v
 
+    @field_validator(
+        "brevo_api_key", "brevo_sender_email", "brevo_sender_name",
+        "gemini_api_key", "gemini_model", "frontend_url", "redis_url",
+    )
+    @classmethod
+    def strip_whitespace(cls, v: str) -> str:
+        """
+        Ortam değişkeni değerlerinin başındaki/sonundaki boşluk ve satır
+        sonu (\\n) karakterlerini temizler.
+
+        Neden gerekli? Render, Vercel gibi panellerde bir değişken değeri
+        yapıştırılırken sona görünmez bir satır sonu karakteri eklenebilir.
+        Örneğin bir API anahtarının sonundaki '\\n', HTTP başlığına (header)
+        konulduğunda "Illegal header value" hatasına yol açar ve istek çöker.
+        Bu doğrulayıcı, böyle kopyala-yapıştır kazalarına karşı koruma sağlar.
+        """
+        return v.strip() if isinstance(v, str) else v
+
     @property
     def cors_origin_list(self) -> list[str]:
         """CORS_ORIGINS env değişkenini liste olarak döndür."""

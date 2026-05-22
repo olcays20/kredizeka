@@ -154,7 +154,11 @@
     "validation_tc": "T.C. Kimlik No 11 hane olmalıdır.",
     "validation_password": "Parola en az 6 karakter olmalıdır.",
     "welcome_toast": "Hoş geldiniz, {{name}}!",
-    "forgot_password_link": "Şifremi Unuttum?"
+    "forgot_password_link": "Şifremi Unuttum?",
+    "unverified_title": "E-posta Doğrulanmadı",
+    "unverified_desc": "Giriş yapabilmek için e-posta adresinizi doğrulamanız gerekiyor.",
+    "resend_link": "Doğrulama e-postasını yeniden gönder",
+    "resending": "Gönderiliyor..."
   },
   "register": {
     "title": "Hesap Oluşturun",
@@ -180,7 +184,10 @@
     "validation_tc_length": "T.C. Kimlik No 11 hane olmalıdır.",
     "validation_tc_zero": "T.C. Kimlik No 0 ile başlayamaz.",
     "validation_phone": "Telefon numarası 11 hane olmalıdır.",
-    "validation_password": "Parola en az 6 karakter olmalıdır."
+    "validation_password": "Parola en az 6 karakter olmalıdır.",
+    "verify_title": "Son Bir Adım!",
+    "verify_message": "{{email}} adresine bir doğrulama bağlantısı gönderdik. Giriş yapabilmek için e-postanızdaki bağlantıya tıklayın.",
+    "go_login": "Giriş Sayfasına Git"
   },
   "forgot_password": {
     "title": "Şifremi Unuttum",
@@ -210,6 +217,13 @@
     "request_new": "Yeni Bağlantı Talep Et",
     "success_toast": "Şifreniz başarıyla güncellendi! Giriş yapabilirsiniz.",
     "back_to_login": "Giriş sayfasına dön"
+  },
+  "email_verification": {
+    "verifying_title": "E-posta Doğrulanıyor",
+    "success_title": "E-posta Doğrulandı",
+    "error_title": "Doğrulama Başarısız",
+    "missing_token": "Doğrulama bağlantısı eksik veya geçersiz. Lütfen e-postanızdaki bağlantıyı kullanın.",
+    "go_login": "Giriş Yap"
   },
   "password_rules": {
     "title": "Şifre şu kuralları sağlamalıdır:",
@@ -244,7 +258,19 @@
     "photo_invalid_type": "Lütfen bir görsel dosyası seçin (JPG, PNG, WebP).",
     "photo_too_large": "Görsel boyutu 2 MB'tan büyük olamaz.",
     "photo_read_error": "Görsel okunurken bir hata oluştu.",
-    "save_success": "Profil bilgileriniz güncellendi."
+    "save_success": "Profil bilgileriniz güncellendi.",
+    "email_label": "E-posta Adresi",
+    "email_verified": "Doğrulanmış",
+    "email_unverified": "Doğrulanmamış",
+    "change_email_title": "E-posta Adresi",
+    "change_email_desc": "Güvenliğiniz için e-posta değişikliği mevcut şifrenizi gerektirir. Yeni adres tekrar doğrulanmalıdır.",
+    "new_email_label": "Yeni E-posta Adresi",
+    "new_email_placeholder": "yeni@eposta.com",
+    "current_password_label": "Mevcut Şifre",
+    "current_password_placeholder": "Mevcut şifrenizi girin",
+    "change_email_submit": "E-postayı Değiştir",
+    "email_invalid": "Geçerli bir e-posta adresi giriniz.",
+    "password_required": "Mevcut şifrenizi giriniz."
   },
   "bireysel": {
     "badge": "Bireysel Bankacılık",

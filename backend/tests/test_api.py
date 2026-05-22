@@ -493,7 +493,7 @@ class TestPasswordReset:
         """
         # main.py'nin kullandığı aynı test veritabanı oturumu
         from database import SessionLocal
-        from models import PasswordResetToken
+        from models import PasswordResetToken, User
 
         email = f"akis.testi.{unique_tc}@kredizeka.com"
 
@@ -506,6 +506,12 @@ class TestPasswordReset:
             "password": "EskiSifre1!",
         })
         assert reg.status_code == 200
+
+        # Giriş yapabilmek için e-postayı doğrulanmış işaretle
+        with SessionLocal() as db:
+            u = db.query(User).filter(User.tc_no == unique_tc).first()
+            u.email_verified = True
+            db.commit()
 
         # 2) Şifre sıfırlama talebinde bulun
         forgot = client.post("/api/forgot-password", json={"email": email})
@@ -547,3 +553,89 @@ class TestPasswordReset:
             "new_password": "BaskaSifre3!",
         })
         assert reuse.status_code == 400
+
+
+# =============================================================================
+# 9) E-POSTA DOĞRULAMA TESTLERİ
+# =============================================================================
+
+class TestEmailVerification:
+    """E-posta doğrulama akışı: kayıt → doğrulama → giriş."""
+
+    def test_login_unverified_returns_403(self, client, unique_tc):
+        """Doğrulanmamış bir hesapla giriş HTTP 403 dönmeli."""
+        client.post("/api/register", json={
+            "tc_no": unique_tc,
+            "full_name": "Dogrulanmamis Kullanici",
+            "email": f"dogrulanmamis.{unique_tc}@kredizeka.com",
+            "phone": "05551234567",
+            "password": "Parola123!",
+        })
+        # Doğrulama yapılmadan giriş denemesi
+        response = client.post("/api/login", json={
+            "tc_no": unique_tc,
+            "password": "Parola123!",
+        })
+        assert response.status_code == 403
+
+    def test_verify_email_invalid_token_returns_400(self, client):
+        """Geçersiz doğrulama jetonu HTTP 400 dönmeli."""
+        response = client.post("/api/verify-email", json={
+            "token": "gecersiz-dogrulama-jetonu",
+        })
+        assert response.status_code == 400
+
+    def test_verify_email_full_flow(self, client, unique_tc):
+        """Kayıt → jetonla doğrulama → giriş başarılı olmalı."""
+        from database import SessionLocal
+        from models import EmailVerificationToken
+
+        client.post("/api/register", json={
+            "tc_no": unique_tc,
+            "full_name": "Dogrulama Akisi",
+            "email": f"dogrulama.{unique_tc}@kredizeka.com",
+            "phone": "05551234567",
+            "password": "Parola123!",
+        })
+
+        # Kayıt sırasında üretilen doğrulama jetonunu DB'den oku
+        db = SessionLocal()
+        token_row = db.query(EmailVerificationToken).filter(
+            EmailVerificationToken.tc_no == unique_tc
+        ).order_by(EmailVerificationToken.id.desc()).first()
+        token_value = token_row.token
+        db.close()
+
+        # Jeton ile e-postayı doğrula
+        verify = client.post("/api/verify-email", json={"token": token_value})
+        assert verify.status_code == 200
+
+        # Artık giriş yapılabilmeli
+        login = client.post("/api/login", json={
+            "tc_no": unique_tc,
+            "password": "Parola123!",
+        })
+        assert login.status_code == 200
+        assert login.json()["user"]["email_verified"] is True
+
+    def test_change_email_wrong_password_returns_401(self, client, registered_user):
+        """Yanlış mevcut şifre ile e-posta değişikliği reddedilmeli."""
+        response = client.post("/api/change-email", json={
+            "tc_no": registered_user["tc_no"],
+            "current_password": "YanlisSifre9!",
+            "new_email": "yeni.adres@kredizeka.com",
+        })
+        assert response.status_code == 401
+
+    def test_change_email_success(self, client, registered_user):
+        """Doğru şifre ile e-posta değişikliği başarılı; yeni adres doğrulanmamış olmalı."""
+        response = client.post("/api/change-email", json={
+            "tc_no": registered_user["tc_no"],
+            "current_password": registered_user["password"],
+            "new_email": f"degisen.{registered_user['tc_no']}@kredizeka.com",
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["user"]["email"] == f"degisen.{registered_user['tc_no']}@kredizeka.com"
+        # Yeni adres yeniden doğrulanmalı
+        assert data["user"]["email_verified"] is False

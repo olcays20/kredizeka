@@ -9,13 +9,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import {
-  User, Briefcase, MapPin, Phone, CreditCard,
-  Save, Edit3, Camera, Trash2, X
+  User, Briefcase, MapPin, Phone, CreditCard, Mail, Lock,
+  Save, Edit3, Camera, Trash2, X, ShieldCheck, ShieldAlert
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024;
+const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
@@ -30,6 +31,11 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
+
+  // E-posta değişikliği durumu
+  const [emailEditing, setEmailEditing] = useState(false);
+  const [emailForm, setEmailForm] = useState({ new_email: '', current_password: '' });
+  const [emailSaving, setEmailSaving] = useState(false);
 
   const fetchProfile = async () => {
     try {
@@ -136,6 +142,54 @@ export default function ProfilePage() {
     });
   };
 
+  const handleChangeEmail = async () => {
+    if (!EMAIL_REGEX.test(emailForm.new_email.trim())) {
+      return toast.error(t('profile.email_invalid'));
+    }
+    if (!emailForm.current_password) {
+      return toast.error(t('profile.password_required'));
+    }
+    setEmailSaving(true);
+    try {
+      const res = await fetch(`${API}/api/change-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tc_no: user.tc_no,
+          current_password: emailForm.current_password,
+          new_email: emailForm.new_email.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+
+      setProfile((p) => ({
+        ...p,
+        email: data.user.email,
+        email_verified: data.user.email_verified,
+      }));
+      updateUser({
+        email: data.user.email,
+        email_verified: data.user.email_verified,
+      });
+      setEmailForm({ new_email: '', current_password: '' });
+      setEmailEditing(false);
+      toast.success(data.message);
+    } catch (err) {
+      const msg = err instanceof TypeError
+        ? t('common.server_unreachable')
+        : (err.message || t('common.unexpected_error'));
+      toast.error(msg);
+    } finally {
+      setEmailSaving(false);
+    }
+  };
+
+  const handleCancelEmail = () => {
+    setEmailEditing(false);
+    setEmailForm({ new_email: '', current_password: '' });
+  };
+
   if (!user) return null;
 
   const currentPicture = editForm.profile_picture !== null
@@ -232,6 +286,24 @@ export default function ProfilePage() {
                       <p className="text-sm font-semibold text-slate-800">{profile.phone}</p>
                     </div>
                   </div>
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-50">
+                    <Mail className="w-5 h-5 text-primary-500 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('profile.email_label')}</p>
+                      <p className="text-sm font-semibold text-slate-800 truncate">{profile.email || t('profile.not_specified')}</p>
+                      {profile.email && (
+                        profile.email_verified ? (
+                          <span className="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-emerald-600">
+                            <ShieldCheck className="w-3.5 h-3.5" /> {t('profile.email_verified')}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-amber-600">
+                            <ShieldAlert className="w-3.5 h-3.5" /> {t('profile.email_unverified')}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="border-t border-slate-100 pt-5 space-y-4">
@@ -272,6 +344,59 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {profile && (
+            <div className="card-static p-8 mt-6">
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-primary-500" /> {t('profile.change_email_title')}
+                </h2>
+                {!emailEditing && (
+                  <button onClick={() => setEmailEditing(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-primary-600 hover:bg-primary-50 transition-all">
+                    <Edit3 className="w-4 h-4" /> {t('profile.edit')}
+                  </button>
+                )}
+              </div>
+              <p className="text-sm text-slate-500 mb-5">{t('profile.change_email_desc')}</p>
+
+              {emailEditing ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
+                      <Mail className="w-4 h-4 text-primary-500" /> {t('profile.new_email_label')}
+                    </label>
+                    <input type="email" value={emailForm.new_email}
+                      onChange={(e) => setEmailForm((p) => ({ ...p, new_email: e.target.value }))}
+                      className="input-field" placeholder={t('profile.new_email_placeholder')} maxLength={255} />
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
+                      <Lock className="w-4 h-4 text-primary-500" /> {t('profile.current_password_label')}
+                    </label>
+                    <input type="password" value={emailForm.current_password}
+                      onChange={(e) => setEmailForm((p) => ({ ...p, current_password: e.target.value }))}
+                      className="input-field" placeholder={t('profile.current_password_placeholder')} />
+                  </div>
+                  <div className="flex gap-3 pt-1">
+                    <button onClick={handleChangeEmail} disabled={emailSaving} className="btn-primary flex items-center gap-2 disabled:opacity-60">
+                      {emailSaving ? (
+                        <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg> {t('profile.saving')}</>
+                      ) : (
+                        <><Save className="w-4 h-4" /> {t('profile.change_email_submit')}</>
+                      )}
+                    </button>
+                    <button onClick={handleCancelEmail} disabled={emailSaving} className="btn-secondary flex items-center gap-2">
+                      <X className="w-4 h-4" /> {t('profile.cancel')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="px-4 py-3 rounded-xl bg-slate-50 text-sm text-slate-700">
+                  {profile.email || t('profile.not_specified')}
+                </p>
+              )}
             </div>
           )}
         </div>

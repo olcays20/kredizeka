@@ -55,11 +55,11 @@ from config import settings
 from database import engine, SessionLocal, Base, get_db
 from models import (
     User, BireyselAnalytics, TicariAnalytics, UrunlerAnalytics,
-    PasswordResetToken
+    PasswordResetToken, EmailVerificationToken
 )
 from services.email_service import (
-    send_welcome_email, send_analysis_report_email, send_login_notification,
-    send_password_reset_email
+    send_analysis_report_email, send_login_notification,
+    send_password_reset_email, send_verification_email
 )
 from services.finance_engines import (
     compute_bireysel_analysis, compute_ticari_analysis, compute_urun_analysis
@@ -126,6 +126,7 @@ def init_database() -> None:
                     phone="00000000000",
                     password_hash=password_hash,
                     is_admin=True,
+                    email_verified=True,
                 )
                 db.add(admin)
                 db.commit()
@@ -151,6 +152,14 @@ def _legacy_migrate() -> None:
                 "ALTER TABLE users ADD COLUMN email VARCHAR(255) NOT NULL DEFAULT ''"
             ))
         print("🔄 Migration: 'email' kolonu users tablosuna eklendi.")
+
+    # 'email_verified' kolonu — var olan kullanıcılar doğrulanmış sayılır (DEFAULT TRUE)
+    if "email_verified" not in existing_cols:
+        with engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT TRUE"
+            ))
+        print("🔄 Migration: 'email_verified' kolonu users tablosuna eklendi.")
 
     # Yalnızca eski SQLite kurulumları için ek kolonlar
     if settings.database_url.startswith("sqlite"):
@@ -247,6 +256,31 @@ class ResetPasswordRequest(BaseModel):
     @classmethod
     def validate_new_password(cls, v: str) -> str:
         return _validate_password_strength(v)
+
+
+class VerifyEmailRequest(BaseModel):
+    """E-posta doğrulama jetonu."""
+    token: str = Field(..., min_length=10, max_length=255)
+
+
+class ResendVerificationRequest(BaseModel):
+    """Doğrulama e-postasının yeniden gönderilmesi talebi."""
+    tc_no: str = Field(..., min_length=11, max_length=11)
+
+
+class ChangeEmailRequest(BaseModel):
+    """Profilden e-posta değişikliği — mevcut şifre doğrulaması gerektirir."""
+    tc_no: str = Field(..., min_length=11, max_length=11)
+    current_password: str = Field(..., min_length=1)
+    new_email: str = Field(..., min_length=5, max_length=255)
+
+    @field_validator("new_email")
+    @classmethod
+    def validate_new_email(cls, v: str) -> str:
+        v = v.strip()
+        if not _EMAIL_REGEX.match(v):
+            raise ValueError("Geçerli bir e-posta adresi giriniz (örn. ad@alan.com).")
+        return v.lower()
 
 
 class ProfileUpdateRequest(BaseModel):
@@ -452,6 +486,30 @@ async def root():
     }
 
 
+def _send_email_verification(user: User, db: Session,
+                             background_tasks: BackgroundTasks) -> None:
+    """Doğrulama jetonu üretir ve doğrulama e-postasını arka planda gönderir."""
+    # Önceki kullanılmamış jetonları iptal et
+    db.query(EmailVerificationToken).filter(
+        EmailVerificationToken.tc_no == user.tc_no,
+        EmailVerificationToken.used.is_(False),
+    ).update({"used": True})
+
+    token = secrets.token_urlsafe(32)
+    db.add(EmailVerificationToken(
+        tc_no=user.tc_no,
+        token=token,
+        expires_at=datetime.utcnow() + timedelta(hours=24),
+        used=False,
+    ))
+    db.commit()
+
+    verify_link = f"{settings.frontend_url.rstrip('/')}/eposta-dogrula?token={token}"
+    background_tasks.add_task(
+        send_verification_email, user.email, user.full_name, verify_link
+    )
+
+
 # ─── 1) KAYIT ──────────────────────────────────────────────────────────────
 @app.post("/api/register")
 @limiter.limit(settings.auth_rate_limit)
@@ -461,12 +519,7 @@ async def register(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    """
-    Yeni kullanıcı kaydı oluşturur.
-
-    Rate limit: 5/dakika (IP başına)
-    Background: Hoş geldin e-postası asenkron gönderilir.
-    """
+    """Yeni kullanıcı kaydı oluşturur ve doğrulama e-postası gönderir."""
     existing = db.query(User).filter(User.tc_no == req.tc_no).first()
     if existing:
         raise HTTPException(
@@ -489,12 +542,13 @@ async def register(
     db.add(user)
     db.commit()
 
-    # Background: kullanıcıyı bekletmeden hoş geldin e-postası
-    background_tasks.add_task(send_welcome_email, req.tc_no, req.full_name)
+    # Doğrulama jetonu üret + doğrulama e-postası gönder
+    _send_email_verification(user, db, background_tasks)
 
     return {
         "success": True,
-        "message": f"Hoş geldiniz {req.full_name}! Hesabınız başarıyla oluşturuldu."
+        "message": f"Hesabınız oluşturuldu, {req.full_name}! Giriş yapabilmek için "
+                   f"e-posta adresinize gönderdiğimiz doğrulama bağlantısına tıklayın.",
     }
 
 
@@ -526,6 +580,14 @@ async def login(
     )
     if not is_valid:
         raise HTTPException(status_code=401, detail="Parola hatalı. Lütfen tekrar deneyiniz.")
+
+    # E-posta doğrulanmadan giriş yapılamaz (403 → frontend yeniden gönder seçeneği sunar)
+    if not user.email_verified:
+        raise HTTPException(
+            status_code=403,
+            detail="E-posta adresiniz henüz doğrulanmadı. Lütfen e-postanıza "
+                   "gönderilen doğrulama bağlantısına tıklayın."
+        )
 
     # Asenkron giriş bildirimi
     client_ip = get_remote_address(request)
@@ -644,6 +706,114 @@ async def reset_password(
         "success": True,
         "message": "Şifreniz başarıyla güncellendi. "
                    "Artık yeni şifrenizle giriş yapabilirsiniz.",
+    }
+
+
+# ─── E-POSTA DOĞRULAMA ─────────────────────────────────────────────────────
+@app.post("/api/verify-email")
+@limiter.limit(settings.auth_rate_limit)
+async def verify_email(
+    request: Request,
+    req: VerifyEmailRequest,
+    db: Session = Depends(get_db),
+):
+    """Doğrulama jetonunu kontrol eder ve hesabın e-postasını doğrular."""
+    record = db.query(EmailVerificationToken).filter(
+        EmailVerificationToken.token == req.token
+    ).first()
+
+    if not record:
+        raise HTTPException(status_code=400, detail="Geçersiz doğrulama bağlantısı.")
+
+    if record.used:
+        raise HTTPException(
+            status_code=400,
+            detail="Bu bağlantı zaten kullanılmış. Hesabınız muhtemelen doğrulanmıştır."
+        )
+
+    if record.expires_at < datetime.utcnow():
+        raise HTTPException(
+            status_code=400,
+            detail="Doğrulama bağlantısının süresi dolmuş. Lütfen yeni bir bağlantı isteyin."
+        )
+
+    user = db.query(User).filter(User.tc_no == record.tc_no).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
+
+    user.email_verified = True
+    record.used = True
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "E-posta adresiniz doğrulandı! Artık giriş yapabilirsiniz.",
+    }
+
+
+@app.post("/api/resend-verification")
+@limiter.limit(settings.auth_rate_limit)
+async def resend_verification(
+    request: Request,
+    req: ResendVerificationRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Doğrulanmamış bir hesaba doğrulama e-postasını yeniden gönderir."""
+    generic_response = {
+        "success": True,
+        "message": "Hesabınız henüz doğrulanmamışsa, doğrulama bağlantısı "
+                   "e-posta adresinize yeniden gönderilmiştir.",
+    }
+    user = db.query(User).filter(User.tc_no == req.tc_no).first()
+    if user and not user.email_verified and user.email:
+        _send_email_verification(user, db, background_tasks)
+    return generic_response
+
+
+@app.post("/api/change-email")
+@limiter.limit(settings.auth_rate_limit)
+async def change_email(
+    request: Request,
+    req: ChangeEmailRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    Profilden e-posta değiştirir.
+
+    Mevcut şifre doğrulanır; yeni adres "doğrulanmamış" olarak işaretlenip
+    o adrese yeni bir doğrulama bağlantısı gönderilir.
+    """
+    user = db.query(User).filter(User.tc_no == req.tc_no).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
+
+    is_valid = bcrypt.checkpw(
+        req.current_password.encode("utf-8"),
+        user.password_hash.encode("utf-8")
+    )
+    if not is_valid:
+        raise HTTPException(status_code=401, detail="Mevcut şifreniz hatalı.")
+
+    if req.new_email == (user.email or "").lower():
+        raise HTTPException(
+            status_code=400,
+            detail="Yeni e-posta adresi mevcut adresinizle aynı."
+        )
+
+    user.email = req.new_email
+    user.email_verified = False
+    db.commit()
+
+    # Yeni adrese doğrulama bağlantısı gönder
+    _send_email_verification(user, db, background_tasks)
+
+    return {
+        "success": True,
+        "message": "E-posta adresiniz güncellendi. Yeni adresinize bir doğrulama "
+                   "bağlantısı gönderildi; bir sonraki girişten önce doğrulayın.",
+        "user": user.to_dict(),
     }
 
 

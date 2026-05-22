@@ -154,7 +154,11 @@
     "validation_tc": "T.C. ID Number must be 11 digits.",
     "validation_password": "Password must be at least 6 characters.",
     "welcome_toast": "Welcome, {{name}}!",
-    "forgot_password_link": "Forgot password?"
+    "forgot_password_link": "Forgot password?",
+    "unverified_title": "Email Not Verified",
+    "unverified_desc": "You need to verify your email address before you can log in.",
+    "resend_link": "Resend verification email",
+    "resending": "Sending..."
   },
   "register": {
     "title": "Create Account",
@@ -180,7 +184,10 @@
     "validation_tc_length": "T.C. ID Number must be 11 digits.",
     "validation_tc_zero": "T.C. ID Number cannot start with 0.",
     "validation_phone": "Phone number must be 11 digits.",
-    "validation_password": "Password must be at least 6 characters."
+    "validation_password": "Password must be at least 6 characters.",
+    "verify_title": "One Last Step!",
+    "verify_message": "We've sent a verification link to {{email}}. Click the link in your email to be able to log in.",
+    "go_login": "Go to Login"
   },
   "forgot_password": {
     "title": "Forgot Password",
@@ -210,6 +217,13 @@
     "request_new": "Request a New Link",
     "success_toast": "Your password has been updated successfully! You can now log in.",
     "back_to_login": "Back to login"
+  },
+  "email_verification": {
+    "verifying_title": "Verifying Email",
+    "success_title": "Email Verified",
+    "error_title": "Verification Failed",
+    "missing_token": "The verification link is missing or invalid. Please use the link from your email.",
+    "go_login": "Log In"
   },
   "password_rules": {
     "title": "Password must meet these rules:",
@@ -244,7 +258,19 @@
     "photo_invalid_type": "Please select an image file (JPG, PNG, WebP).",
     "photo_too_large": "Image size cannot exceed 2 MB.",
     "photo_read_error": "An error occurred while reading the image.",
-    "save_success": "Your profile has been updated."
+    "save_success": "Your profile has been updated.",
+    "email_label": "Email Address",
+    "email_verified": "Verified",
+    "email_unverified": "Not verified",
+    "change_email_title": "Email Address",
+    "change_email_desc": "For your security, changing your email requires your current password. The new address must be re-verified.",
+    "new_email_label": "New Email Address",
+    "new_email_placeholder": "new@email.com",
+    "current_password_label": "Current Password",
+    "current_password_placeholder": "Enter your current password",
+    "change_email_submit": "Change Email",
+    "email_invalid": "Please enter a valid email address.",
+    "password_required": "Enter your current password."
   },
   "bireysel": {
     "badge": "Personal Banking",

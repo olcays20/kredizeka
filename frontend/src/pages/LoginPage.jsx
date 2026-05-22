@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
-import { LogIn, CreditCard, Lock, ArrowRight } from 'lucide-react';
+import { LogIn, CreditCard, Lock, ArrowRight, MailWarning } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -20,6 +20,9 @@ export default function LoginPage() {
   const { t } = useTranslation();
   const [form, setForm] = useState({ tc_no: '', password: '' });
   const [loading, setLoading] = useState(false);
+  // Giriş, e-posta doğrulanmadığı için (403) reddedildiğinde true olur
+  const [unverified, setUnverified] = useState(false);
+  const [resending, setResending] = useState(false);
 
   // T.C. No: Sadece rakam, maks 11 hane
   const handleTcInput = (e) => {
@@ -33,6 +36,7 @@ export default function LoginPage() {
     if (form.tc_no.length !== 11) return toast.error(t('login.validation_tc'));
     if (form.password.length < 6) return toast.error(t('login.validation_password'));
 
+    setUnverified(false);
     setLoading(true);
     try {
       const res = await fetch(`${API}/api/login`, {
@@ -41,6 +45,13 @@ export default function LoginPage() {
         body: JSON.stringify(form),
       });
       const data = await res.json();
+
+      // 403 → e-posta doğrulanmamış: yeniden gönder seçeneği göster
+      if (res.status === 403) {
+        setUnverified(true);
+        toast.error(data.detail);
+        return;
+      }
       if (!res.ok) throw new Error(data.detail || 'Giriş başarısız.');
 
       login(data.user);
@@ -53,6 +64,28 @@ export default function LoginPage() {
       toast.error(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Doğrulama e-postasını yeniden gönder
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      const res = await fetch(`${API}/api/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tc_no: form.tc_no }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || t('common.unexpected_error'));
+      toast.success(data.message);
+    } catch (err) {
+      const msg = err instanceof TypeError
+        ? t('common.server_unreachable')
+        : (err.message || t('common.unexpected_error'));
+      toast.error(msg);
+    } finally {
+      setResending(false);
     }
   };
 
@@ -100,6 +133,27 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          {/* E-posta doğrulanmamışsa yeniden gönderme kutusu */}
+          {unverified && (
+            <div className="mt-5 p-4 rounded-xl bg-amber-50 border border-amber-200">
+              <div className="flex items-start gap-3">
+                <MailWarning className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-800">{t('login.unverified_title')}</p>
+                  <p className="text-xs text-amber-700 mt-1">{t('login.unverified_desc')}</p>
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resending}
+                    className="mt-3 text-sm font-semibold text-amber-800 underline disabled:opacity-60"
+                  >
+                    {resending ? t('login.resending') : t('login.resend_link')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-slate-200" />

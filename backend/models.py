@@ -59,6 +59,8 @@ class User(Base):
     full_name = Column(String(100), nullable=False)
     # Eski kayıtlarda boş olabileceğinden unique kısıtı yok.
     email = Column(String(255), default="", nullable=False)
+    # E-posta doğrulandı mı? Doğrulanmadan giriş yapılamaz.
+    email_verified = Column(Boolean, default=False, nullable=False)
     phone = Column(String(11), nullable=False)
     password_hash = Column(String(255), nullable=False)
     occupation = Column(String(200), default="", nullable=False)
@@ -91,6 +93,7 @@ class User(Base):
             "tc_no": self.tc_no,
             "full_name": self.full_name,
             "email": self.email or "",
+            "email_verified": bool(self.email_verified),
             "phone": self.phone,
             "occupation": self.occupation or "",
             "address": self.address or "",
@@ -250,3 +253,17 @@ class PasswordResetToken(Base):
             "used": bool(self.used),
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class EmailVerificationToken(Base):
+    """E-posta doğrulama jetonları — tek kullanımlık, süreli (expires_at)."""
+
+    __tablename__ = "email_verification_tokens"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    tc_no = Column(String(11), ForeignKey("users.tc_no", ondelete="CASCADE"),
+                   nullable=False, index=True)
+    token = Column(String(255), unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

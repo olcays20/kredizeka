@@ -6,20 +6,20 @@
  */
 
 import { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { UserPlus, User, CreditCard, Mail, Phone, Lock, ArrowRight } from 'lucide-react';
+import { UserPlus, User, CreditCard, Mail, Phone, Lock, ArrowRight, MailCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PasswordChecklist, { isStrongPassword } from '../components/PasswordChecklist';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function RegisterPage() {
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const [form, setForm] = useState({ full_name: '', email: '', tc_no: '', phone: '', password: '' });
   const [loading, setLoading] = useState(false);
+  // Kayıt başarılı olunca true olur → "e-postanı doğrula" ekranı gösterilir
+  const [registered, setRegistered] = useState(false);
 
   // E-posta formatını doğrulayan Regex: "@ içermeyen metin" + "@" +
   // "@ içermeyen metin" + "." + "@ ve boşluk içermeyen metin"
@@ -66,7 +66,7 @@ export default function RegisterPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Kayıt başarısız.');
       toast.success(data.message);
-      setTimeout(() => navigate('/giris'), 2000);
+      setRegistered(true);
     } catch (err) {
       const msg = err instanceof TypeError
         ? t('common.server_unreachable')
@@ -84,6 +84,23 @@ export default function RegisterPage() {
 
       <div className="relative w-full max-w-lg mx-4 animate-fade-in-up">
         <div className="card-static p-10">
+
+          {registered ? (
+            /* Kayıt başarılı — e-posta doğrulama ekranı */
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 mb-4">
+                <MailCheck className="w-8 h-8 text-white" />
+              </div>
+              <h1 className="text-2xl font-extrabold text-slate-900">{t('register.verify_title')}</h1>
+              <p className="text-sm text-slate-500 mt-3 leading-relaxed">
+                {t('register.verify_message', { email: form.email })}
+              </p>
+              <Link to="/giris" className="btn-primary mt-8 inline-flex items-center justify-center gap-2">
+                {t('register.go_login')} <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          ) : (
+          <>
           <div className="text-center mb-8">
             <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30 mb-4">
               <UserPlus className="w-8 h-8 text-white" />
@@ -146,6 +163,9 @@ export default function RegisterPage() {
             {t('register.have_account')}{' '}
             <Link to="/giris" className="text-primary-600 font-semibold hover:underline">{t('register.login_link')}</Link>
           </p>
+          </>
+          )}
+
         </div>
       </div>
     </div>

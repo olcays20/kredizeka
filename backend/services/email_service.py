@@ -44,23 +44,6 @@ def _simulate_smtp_delay():
     time.sleep(0.05)
 
 
-def send_welcome_email(recipient: str, full_name: str) -> None:
-    """
-    Yeni kayıt olan kullanıcıya hoş geldin e-postası gönderir.
-
-    Args:
-        recipient: Alıcı adresi (şu an: TC No / gelecekte: gerçek e-posta)
-        full_name: Kullanıcının tam adı (kişiselleştirme için)
-    """
-    _simulate_smtp_delay()
-    timestamp = datetime.utcnow().isoformat()
-    logger.info(
-        "📧 [HOŞ GELDİN E-POSTASI] | Alıcı: %s | Ad: %s | Zaman: %s | "
-        "Konu: 'KrediZeka'ya Hoş Geldiniz!' | Durum: ✓ Gönderildi (simülasyon)",
-        recipient, full_name, timestamp
-    )
-
-
 def send_analysis_report_email(recipient: str, full_name: str, score: int) -> None:
     """
     Risk analizi sonucunu e-posta ile gönderir.
@@ -226,4 +209,95 @@ def send_password_reset_email(to_email: str, full_name: str,
         "📧 [ŞİFRE SIFIRLAMA — SİMÜLASYON] | Alıcı: %s | Ad: %s | "
         "SIFIRLAMA LİNKİ: %s",
         to_email, full_name, reset_link
+    )
+
+
+def _verification_html(full_name: str, verify_link: str) -> str:
+    """E-posta doğrulama (hoş geldin) e-postasının HTML gövdesini üretir."""
+    return f"""\
+<!DOCTYPE html>
+<html lang="tr">
+<head><meta charset="utf-8" /></head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;
+             font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 0;">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0"
+             style="background:#ffffff;border-radius:16px;overflow:hidden;
+                    box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+        <tr><td style="background:linear-gradient(135deg,#4f46e5,#7c3aed);
+                       padding:28px 32px;">
+          <h1 style="margin:0;color:#ffffff;font-size:22px;">KrediZeka</h1>
+          <p style="margin:4px 0 0;color:#e0e7ff;font-size:13px;">
+            Finansal Risk Asistanı</p>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <h2 style="margin:0 0 16px;color:#1e293b;font-size:18px;">
+            KrediZeka'ya Hoş Geldiniz!</h2>
+          <p style="margin:0 0 16px;color:#475569;font-size:14px;line-height:1.6;">
+            Merhaba <strong>{full_name}</strong>,</p>
+          <p style="margin:0 0 24px;color:#475569;font-size:14px;line-height:1.6;">
+            Hesabınız oluşturuldu. Giriş yapabilmek için e-posta adresinizi
+            doğrulamanız gerekiyor. Aşağıdaki butona tıklayarak doğrulamayı
+            tamamlayın. Bu bağlantı <strong>24 saat</strong> boyunca geçerlidir.</p>
+          <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+            <tr><td style="border-radius:10px;
+                           background:linear-gradient(135deg,#4f46e5,#7c3aed);">
+              <a href="{verify_link}"
+                 style="display:inline-block;padding:14px 32px;color:#ffffff;
+                        font-size:15px;font-weight:bold;text-decoration:none;">
+                E-postamı Doğrula</a>
+            </td></tr>
+          </table>
+          <p style="margin:0 0 8px;color:#94a3b8;font-size:12px;line-height:1.6;">
+            Buton çalışmazsa bu bağlantıyı tarayıcınıza yapıştırın:</p>
+          <p style="margin:0 0 24px;color:#4f46e5;font-size:12px;
+                    word-break:break-all;">{verify_link}</p>
+          <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.6;">
+            Bu hesabı siz oluşturmadıysanız bu e-postayı görmezden gelebilirsiniz.</p>
+        </td></tr>
+        <tr><td style="background:#f8fafc;padding:20px 32px;
+                       border-top:1px solid #e2e8f0;">
+          <p style="margin:0;color:#94a3b8;font-size:11px;">
+            © KrediZeka — Bu otomatik bir e-postadır, lütfen yanıtlamayın.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+
+def send_verification_email(to_email: str, full_name: str,
+                            verify_link: str) -> None:
+    """
+    Kayıt sonrası e-posta doğrulama (hoş geldin) e-postasını gönderir.
+
+    Brevo yapılandırılmışsa gerçekten gönderir; değilse doğrulama linkini
+    log'a yazar (simülasyon yedeği).
+    """
+    subject = "KrediZeka — E-posta Adresinizi Doğrulayın"
+    html = _verification_html(full_name, verify_link)
+
+    if settings.brevo_api_key and settings.brevo_sender_email:
+        try:
+            _send_via_brevo(to_email, full_name, subject, html)
+            logger.info(
+                "📧 [E-POSTA DOĞRULAMA] | Alıcı: %s | Ad: %s | "
+                "Durum: ✓ Brevo ile GÖNDERİLDİ",
+                to_email, full_name
+            )
+            return
+        except Exception as e:
+            logger.error(
+                "❌ [E-POSTA DOĞRULAMA] Brevo gönderimi başarısız (%s: %s). "
+                "Simülasyon yedeğine geçiliyor.",
+                type(e).__name__, e
+            )
+
+    # Simülasyon yedeği: doğrulama linkini log'a yaz
+    logger.info(
+        "📧 [E-POSTA DOĞRULAMA — SİMÜLASYON] | Alıcı: %s | Ad: %s | "
+        "DOĞRULAMA LİNKİ: %s",
+        to_email, full_name, verify_link
     )

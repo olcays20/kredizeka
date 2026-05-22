@@ -111,4 +111,13 @@ def registered_user(client, unique_tc):
     response = client.post("/api/register", json=user_data)
     # Kaydın başarılı olduğunu doğrula (fixture kurulumu güvencesi)
     assert response.status_code == 200, f"Fixture kaydı başarısız: {response.text}"
+
+    # Giriş yapabilmek için e-postayı doğrulanmış olarak işaretle
+    from database import SessionLocal
+    from models import User
+    with SessionLocal() as db:
+        u = db.query(User).filter(User.tc_no == unique_tc).first()
+        u.email_verified = True
+        db.commit()
+
     return user_data

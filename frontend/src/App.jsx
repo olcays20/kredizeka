@@ -31,6 +31,7 @@ const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const EmailVerificationPage = lazy(() => import('./pages/EmailVerificationPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const BireyselPage = lazy(() => import('./pages/BireyselPage'));
 const TicariPage = lazy(() => import('./pages/TicariPage'));
@@ -101,6 +102,7 @@ function App() {
                 <Route path="/giris" element={<LoginPage />} />
                 <Route path="/sifremi-unuttum" element={<ForgotPasswordPage />} />
                 <Route path="/sifre-sifirla" element={<ResetPasswordPage />} />
+                <Route path="/eposta-dogrula" element={<EmailVerificationPage />} />
                 <Route path="/profil" element={
                   <ProtectedRoute>
                     <ProfilePage />

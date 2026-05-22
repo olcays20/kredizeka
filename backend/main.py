@@ -116,8 +116,14 @@ def init_database() -> None:
                 db.commit()
                 print(f"🛡️  Mevcut kullanıcı admin yapıldı: TC={settings.default_admin_tc}")
             else:
+                # Ortam değişkeni tanımlı değilse rastgele güçlü parola üret
+                admin_password = settings.default_admin_password.strip()
+                if not admin_password:
+                    admin_password = secrets.token_urlsafe(12)
+                    print("⚠️  DEFAULT_ADMIN_PASSWORD tanımlı değil — "
+                          "rastgele bir yönetici parolası üretildi.")
                 password_hash = bcrypt.hashpw(
-                    settings.default_admin_password.encode("utf-8"),
+                    admin_password.encode("utf-8"),
                     bcrypt.gensalt()
                 ).decode("utf-8")
                 admin = User(
@@ -133,7 +139,7 @@ def init_database() -> None:
                 print(
                     f"🛡️  Varsayılan admin oluşturuldu → "
                     f"TC: {settings.default_admin_tc} | "
-                    f"Şifre: {settings.default_admin_password}"
+                    f"Şifre: {admin_password}"
                 )
 
 
@@ -778,6 +784,7 @@ async def change_email(
     req: ChangeEmailRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    x_user_tc: Optional[str] = Header(None, alias="X-User-TC"),
 ):
     """
     Profilden e-posta değiştirir.
@@ -785,6 +792,9 @@ async def change_email(
     Mevcut şifre doğrulanır; yeni adres "doğrulanmamış" olarak işaretlenip
     o adrese yeni bir doğrulama bağlantısı gönderilir.
     """
+    # IDOR koruması: yalnızca kendi e-postasını değiştirebilir
+    _require_self_or_admin(req.tc_no, x_user_tc, db)
+
     user = db.query(User).filter(User.tc_no == req.tc_no).first()
     if not user:
         raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
@@ -817,9 +827,39 @@ async def change_email(
     }
 
 
+def _require_self_or_admin(
+    tc_no: str,
+    x_user_tc: Optional[str],
+    db: Session,
+) -> None:
+    """
+    İstek sahibinin, eriştiği kaynağın sahibi (tc_no) ya da bir yönetici
+    olmasını zorunlu kılar; aksi halde 401/403 fırlatır. Kimlik 'X-User-TC'
+    başlığından okunur — IDOR (yetkisiz kaynak erişimi) koruması.
+    """
+    if not x_user_tc:
+        raise HTTPException(
+            status_code=401, detail="Yetkilendirme bilgisi eksik (X-User-TC)."
+        )
+    if x_user_tc == tc_no:
+        return
+    requester = db.query(User).filter(User.tc_no == x_user_tc).first()
+    if requester and requester.is_admin:
+        return
+    raise HTTPException(
+        status_code=403, detail="Bu kaynağa erişim yetkiniz yok."
+    )
+
+
 # ─── 3) PROFİL GETİR ───────────────────────────────────────────────────────
 @app.get("/api/profile/{tc_no}")
-async def get_profile(tc_no: str, db: Session = Depends(get_db)):
+async def get_profile(
+    tc_no: str,
+    db: Session = Depends(get_db),
+    x_user_tc: Optional[str] = Header(None, alias="X-User-TC"),
+):
+    # IDOR koruması: yalnızca kullanıcının kendisi veya admin erişebilir
+    _require_self_or_admin(tc_no, x_user_tc, db)
     user = db.query(User).filter(User.tc_no == tc_no).first()
     if not user:
         raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
@@ -828,7 +868,13 @@ async def get_profile(tc_no: str, db: Session = Depends(get_db)):
 
 # ─── 4) PROFİL GÜNCELLE ────────────────────────────────────────────────────
 @app.put("/api/profile")
-async def update_profile(req: ProfileUpdateRequest, db: Session = Depends(get_db)):
+async def update_profile(
+    req: ProfileUpdateRequest,
+    db: Session = Depends(get_db),
+    x_user_tc: Optional[str] = Header(None, alias="X-User-TC"),
+):
+    # IDOR koruması: yalnızca kendi profilini (veya admin) güncelleyebilir
+    _require_self_or_admin(req.tc_no, x_user_tc, db)
     user = db.query(User).filter(User.tc_no == req.tc_no).first()
     if not user:
         raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
@@ -1220,11 +1266,17 @@ async def urunler_analyze(
 
 # ─── 9) KULLANICININ ANALİZ GEÇMİŞİ ────────────────────────────────────────
 @app.get("/api/analytics/history/{tc_no}")
-async def analytics_history(tc_no: str, db: Session = Depends(get_db)):
+async def analytics_history(
+    tc_no: str,
+    db: Session = Depends(get_db),
+    x_user_tc: Optional[str] = Header(None, alias="X-User-TC"),
+):
     """
     Bir kullanıcının tüm interaktif modül analiz geçmişini döndürür.
     Bireysel, ticari ve ürün analizlerini tek yanıtta birleştirir.
     """
+    # IDOR koruması: yalnızca kendi geçmişini (veya admin) görüntüleyebilir
+    _require_self_or_admin(tc_no, x_user_tc, db)
     _ensure_user_exists(tc_no, db)
 
     bireysel = db.query(BireyselAnalytics).filter(

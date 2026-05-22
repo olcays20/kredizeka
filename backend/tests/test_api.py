@@ -439,8 +439,11 @@ class TestAnalyticsHistory:
             },
         })
 
-        # Geçmişi sorgula
-        response = client.get(f"/api/analytics/history/{registered_user['tc_no']}")
+        # Geçmişi sorgula (IDOR koruması: kendi T.C.'si için X-User-TC başlığı)
+        response = client.get(
+            f"/api/analytics/history/{registered_user['tc_no']}",
+            headers={"X-User-TC": registered_user["tc_no"]},
+        )
         assert response.status_code == 200
         data = response.json()
         assert "bireysel" in data
@@ -620,20 +623,28 @@ class TestEmailVerification:
 
     def test_change_email_wrong_password_returns_401(self, client, registered_user):
         """Yanlış mevcut şifre ile e-posta değişikliği reddedilmeli."""
-        response = client.post("/api/change-email", json={
-            "tc_no": registered_user["tc_no"],
-            "current_password": "YanlisSifre9!",
-            "new_email": "yeni.adres@kredizeka.com",
-        })
+        response = client.post(
+            "/api/change-email",
+            headers={"X-User-TC": registered_user["tc_no"]},
+            json={
+                "tc_no": registered_user["tc_no"],
+                "current_password": "YanlisSifre9!",
+                "new_email": "yeni.adres@kredizeka.com",
+            },
+        )
         assert response.status_code == 401
 
     def test_change_email_success(self, client, registered_user):
         """Doğru şifre ile e-posta değişikliği başarılı; yeni adres doğrulanmamış olmalı."""
-        response = client.post("/api/change-email", json={
-            "tc_no": registered_user["tc_no"],
-            "current_password": registered_user["password"],
-            "new_email": f"degisen.{registered_user['tc_no']}@kredizeka.com",
-        })
+        response = client.post(
+            "/api/change-email",
+            headers={"X-User-TC": registered_user["tc_no"]},
+            json={
+                "tc_no": registered_user["tc_no"],
+                "current_password": registered_user["password"],
+                "new_email": f"degisen.{registered_user['tc_no']}@kredizeka.com",
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["user"]["email"] == f"degisen.{registered_user['tc_no']}@kredizeka.com"
@@ -696,3 +707,51 @@ class TestAdminUserManagement:
         """Yetki bilgisi olmadan silme reddedilmeli (HTTP 401)."""
         resp = client.delete(f"/api/admin/users/{registered_user['tc_no']}")
         assert resp.status_code == 401
+
+
+# =============================================================================
+# 11) ERİŞİM DENETİMİ TESTLERİ (IDOR Koruması)
+# =============================================================================
+
+class TestAccessControl:
+    """Kullanıcı yalnızca kendi kaynaklarına erişebilmeli (IDOR koruması)."""
+
+    ADMIN_TC = "11111111111"
+
+    def test_get_own_profile_ok(self, client, registered_user):
+        """Kullanıcı kendi profilini görebilmeli."""
+        resp = client.get(
+            f"/api/profile/{registered_user['tc_no']}",
+            headers={"X-User-TC": registered_user["tc_no"]},
+        )
+        assert resp.status_code == 200
+
+    def test_get_profile_without_header_unauthorized(self, client, registered_user):
+        """X-User-TC başlığı olmadan profil isteği reddedilmeli (HTTP 401)."""
+        resp = client.get(f"/api/profile/{registered_user['tc_no']}")
+        assert resp.status_code == 401
+
+    def test_get_other_user_profile_forbidden(self, client, registered_user):
+        """Normal kullanıcı başkasının profilini görememeli (HTTP 403)."""
+        # registered_user (normal kullanıcı) yönetici profiline erişmeye çalışır
+        resp = client.get(
+            f"/api/profile/{self.ADMIN_TC}",
+            headers={"X-User-TC": registered_user["tc_no"]},
+        )
+        assert resp.status_code == 403
+
+    def test_admin_can_access_any_profile(self, client, registered_user):
+        """Yönetici herhangi bir kullanıcının profilini görebilmeli."""
+        resp = client.get(
+            f"/api/profile/{registered_user['tc_no']}",
+            headers={"X-User-TC": self.ADMIN_TC},
+        )
+        assert resp.status_code == 200
+
+    def test_get_other_user_history_forbidden(self, client, registered_user):
+        """Normal kullanıcı başkasının analiz geçmişini görememeli (HTTP 403)."""
+        resp = client.get(
+            f"/api/analytics/history/{self.ADMIN_TC}",
+            headers={"X-User-TC": registered_user["tc_no"]},
+        )
+        assert resp.status_code == 403

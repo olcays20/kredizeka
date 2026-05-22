@@ -39,7 +39,9 @@ export default function ProfilePage() {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch(`${API}/api/profile/${user.tc_no}`);
+      const res = await fetch(`${API}/api/profile/${user.tc_no}`, {
+        headers: { 'X-User-TC': user.tc_no },
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail);
       setProfile(data);
@@ -105,7 +107,10 @@ export default function ProfilePage() {
 
       const res = await fetch(`${API}/api/profile`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-TC': user.tc_no,
+        },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
@@ -153,7 +158,10 @@ export default function ProfilePage() {
     try {
       const res = await fetch(`${API}/api/change-email`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-TC': user.tc_no,
+        },
         body: JSON.stringify({
           tc_no: user.tc_no,
           current_password: emailForm.current_password,

@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import {
   ClipboardList, User, Mail, Phone, Link2, Briefcase, Upload,
   FileText, CheckCircle2, ChevronLeft, Send, X, Shield, Clock,
@@ -124,8 +124,10 @@ export default function IsBasvurusuPage() {
                 <h1 className="text-2xl md:text-3xl font-extrabold text-white mb-2">
                   {t('basvuru.page_title')}
                 </h1>
-                {/* page_desc içinde <strong> HTML var, dangerouslySetInnerHTML ile render */}
-                <p className="text-primary-100 leading-relaxed" dangerouslySetInnerHTML={{ __html: t('basvuru.page_desc') }} />
+                {/* <strong> etiketi <Trans> ile güvenli (React elemanı) olarak render edilir */}
+                <p className="text-primary-100 leading-relaxed">
+                  <Trans i18nKey="basvuru.page_desc" />
+                </p>
               </div>
             </div>
           </div>

@@ -31,8 +31,13 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:////tmp/kredizeka.db"
 
     # ─── CORS ────────────────────────────────────────────────────────
-    # Virgülle ayrılmış origin listesi ("*" = hepsi)
-    cors_origins: str = "*"
+    # Yalnızca güvenilen origin'lere izin verilir (yerel geliştirme +
+    # Vercel üretim domaini). Gerekirse CORS_ORIGINS ortam değişkeniyle
+    # virgülle ayrılmış başka adresler eklenebilir.
+    cors_origins: str = (
+        "http://localhost:5173,http://localhost:3000,"
+        "https://kredizeka.vercel.app"
+    )
 
     # ─── Redis (Önbellek) ────────────────────────────────────────────
     # Erişilemezse uygulama bellek-içi önbelleğe düşer.
@@ -58,9 +63,11 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:5173"
 
     # ─── Varsayılan Admin ───────────────────────────────────────────
-    # İlk başlatmada otomatik oluşturulur (sadece sistemde admin yoksa)
+    # İlk başlatmada otomatik oluşturulur (sadece sistemde admin yoksa).
+    # default_admin_password boş bırakılırsa, açılışta rastgele güçlü bir
+    # parola üretilir — koda hiçbir zaman sabit (hardcoded) parola yazılmaz.
     default_admin_tc: str = "11111111111"
-    default_admin_password: str = "admin123"
+    default_admin_password: str = ""
     default_admin_name: str = "KrediZeka Yönetici"
 
     # ─── Rate Limiting ───────────────────────────────────────────────

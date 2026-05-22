@@ -282,7 +282,15 @@
     "current_password_placeholder": "Enter your current password",
     "change_email_submit": "Change Email",
     "email_invalid": "Please enter a valid email address.",
-    "password_required": "Enter your current password."
+    "password_required": "Enter your current password.",
+    "change_password_title": "Change Password",
+    "change_password_desc": "For your security, changing your password requires your current password.",
+    "new_password_label": "New Password",
+    "new_password_placeholder": "Enter your new password",
+    "confirm_password_label": "New Password (Confirm)",
+    "confirm_password_placeholder": "Re-enter your new password",
+    "change_password_submit": "Change Password",
+    "password_mismatch": "New passwords do not match."
   },
   "bireysel": {
     "badge": "Personal Banking",

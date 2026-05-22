@@ -289,6 +289,18 @@ class ChangeEmailRequest(BaseModel):
         return v.lower()
 
 
+class ChangePasswordRequest(BaseModel):
+    """Profilden şifre değişikliği — mevcut şifre doğrulaması gerektirir."""
+    tc_no: str = Field(..., min_length=11, max_length=11)
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., max_length=100)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        return _validate_password_strength(v)
+
+
 class ProfileUpdateRequest(BaseModel):
     tc_no: str = Field(..., min_length=11, max_length=11)
     occupation: str = Field("", max_length=200)
@@ -824,6 +836,59 @@ async def change_email(
         "message": "E-posta adresiniz güncellendi. Yeni adresinize bir doğrulama "
                    "bağlantısı gönderildi; bir sonraki girişten önce doğrulayın.",
         "user": user.to_dict(),
+    }
+
+
+@app.post("/api/change-password")
+@limiter.limit(settings.auth_rate_limit)
+async def change_password(
+    request: Request,
+    req: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    x_user_tc: Optional[str] = Header(None, alias="X-User-TC"),
+):
+    """
+    Profilden şifre değiştirir.
+
+    Mevcut şifre doğrulanır; yeni şifre güçlü parola kriterlerini (Pydantic
+    doğrulayıcısı) karşılamalı ve eski şifreden farklı olmalıdır.
+    """
+    # IDOR koruması: yalnızca kendi şifresini değiştirebilir
+    _require_self_or_admin(req.tc_no, x_user_tc, db)
+
+    user = db.query(User).filter(User.tc_no == req.tc_no).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
+
+    # Mevcut şifre doğru mu?
+    is_valid = bcrypt.checkpw(
+        req.current_password.encode("utf-8"),
+        user.password_hash.encode("utf-8")
+    )
+    if not is_valid:
+        raise HTTPException(status_code=401, detail="Mevcut şifreniz hatalı.")
+
+    # Yeni şifre eskisiyle aynı olmamalı
+    same_as_old = bcrypt.checkpw(
+        req.new_password.encode("utf-8"),
+        user.password_hash.encode("utf-8")
+    )
+    if same_as_old:
+        raise HTTPException(
+            status_code=400,
+            detail="Yeni şifreniz mevcut şifrenizden farklı olmalıdır."
+        )
+
+    # Yeni şifreyi bcrypt ile hash'le ve kaydet
+    user.password_hash = bcrypt.hashpw(
+        req.new_password.encode("utf-8"),
+        bcrypt.gensalt()
+    ).decode("utf-8")
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Şifreniz başarıyla güncellendi.",
     }
 
 

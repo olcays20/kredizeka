@@ -9,10 +9,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import {
-  User, Briefcase, MapPin, Phone, CreditCard, Mail, Lock,
+  User, Briefcase, MapPin, Phone, CreditCard, Mail, Lock, KeyRound,
   Save, Edit3, Camera, Trash2, X, ShieldCheck, ShieldAlert
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PasswordChecklist, { isStrongPassword } from '../components/PasswordChecklist';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024;
@@ -36,6 +37,13 @@ export default function ProfilePage() {
   const [emailEditing, setEmailEditing] = useState(false);
   const [emailForm, setEmailForm] = useState({ new_email: '', current_password: '' });
   const [emailSaving, setEmailSaving] = useState(false);
+
+  // Şifre değişikliği durumu
+  const [pwEditing, setPwEditing] = useState(false);
+  const [pwForm, setPwForm] = useState({
+    current_password: '', new_password: '', confirm_password: '',
+  });
+  const [pwSaving, setPwSaving] = useState(false);
 
   const fetchProfile = async () => {
     try {
@@ -196,6 +204,51 @@ export default function ProfilePage() {
   const handleCancelEmail = () => {
     setEmailEditing(false);
     setEmailForm({ new_email: '', current_password: '' });
+  };
+
+  const handleChangePassword = async () => {
+    if (!pwForm.current_password) {
+      return toast.error(t('profile.password_required'));
+    }
+    if (!isStrongPassword(pwForm.new_password)) {
+      return toast.error(t('password_rules.weak_error'));
+    }
+    if (pwForm.new_password !== pwForm.confirm_password) {
+      return toast.error(t('profile.password_mismatch'));
+    }
+    setPwSaving(true);
+    try {
+      const res = await fetch(`${API}/api/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-TC': user.tc_no,
+        },
+        body: JSON.stringify({
+          tc_no: user.tc_no,
+          current_password: pwForm.current_password,
+          new_password: pwForm.new_password,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+
+      setPwForm({ current_password: '', new_password: '', confirm_password: '' });
+      setPwEditing(false);
+      toast.success(data.message);
+    } catch (err) {
+      const msg = err instanceof TypeError
+        ? t('common.server_unreachable')
+        : (err.message || t('common.unexpected_error'));
+      toast.error(msg);
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
+  const handleCancelPassword = () => {
+    setPwEditing(false);
+    setPwForm({ current_password: '', new_password: '', confirm_password: '' });
   };
 
   if (!user) return null;
@@ -403,6 +456,68 @@ export default function ProfilePage() {
               ) : (
                 <p className="px-4 py-3 rounded-xl bg-slate-50 text-sm text-slate-700">
                   {profile.email || t('profile.not_specified')}
+                </p>
+              )}
+            </div>
+          )}
+
+          {profile && (
+            <div className="card-static p-8 mt-6">
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <KeyRound className="w-5 h-5 text-primary-500" /> {t('profile.change_password_title')}
+                </h2>
+                {!pwEditing && (
+                  <button onClick={() => setPwEditing(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-primary-600 hover:bg-primary-50 transition-all">
+                    <Edit3 className="w-4 h-4" /> {t('profile.edit')}
+                  </button>
+                )}
+              </div>
+              <p className="text-sm text-slate-500 mb-5">{t('profile.change_password_desc')}</p>
+
+              {pwEditing ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
+                      <Lock className="w-4 h-4 text-primary-500" /> {t('profile.current_password_label')}
+                    </label>
+                    <input type="password" value={pwForm.current_password}
+                      onChange={(e) => setPwForm((p) => ({ ...p, current_password: e.target.value }))}
+                      className="input-field" placeholder={t('profile.current_password_placeholder')} />
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
+                      <KeyRound className="w-4 h-4 text-primary-500" /> {t('profile.new_password_label')}
+                    </label>
+                    <input type="password" value={pwForm.new_password}
+                      onChange={(e) => setPwForm((p) => ({ ...p, new_password: e.target.value }))}
+                      className="input-field" placeholder={t('profile.new_password_placeholder')} />
+                    <PasswordChecklist password={pwForm.new_password} />
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
+                      <KeyRound className="w-4 h-4 text-primary-500" /> {t('profile.confirm_password_label')}
+                    </label>
+                    <input type="password" value={pwForm.confirm_password}
+                      onChange={(e) => setPwForm((p) => ({ ...p, confirm_password: e.target.value }))}
+                      className="input-field" placeholder={t('profile.confirm_password_placeholder')} />
+                  </div>
+                  <div className="flex gap-3 pt-1">
+                    <button onClick={handleChangePassword} disabled={pwSaving} className="btn-primary flex items-center gap-2 disabled:opacity-60">
+                      {pwSaving ? (
+                        <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg> {t('profile.saving')}</>
+                      ) : (
+                        <><Save className="w-4 h-4" /> {t('profile.change_password_submit')}</>
+                      )}
+                    </button>
+                    <button onClick={handleCancelPassword} disabled={pwSaving} className="btn-secondary flex items-center gap-2">
+                      <X className="w-4 h-4" /> {t('profile.cancel')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="px-4 py-3 rounded-xl bg-slate-50 text-sm text-slate-700 font-mono tracking-widest">
+                  ••••••••••
                 </p>
               )}
             </div>

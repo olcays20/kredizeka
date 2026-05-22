@@ -282,7 +282,15 @@
     "current_password_placeholder": "Mevcut şifrenizi girin",
     "change_email_submit": "E-postayı Değiştir",
     "email_invalid": "Geçerli bir e-posta adresi giriniz.",
-    "password_required": "Mevcut şifrenizi giriniz."
+    "password_required": "Mevcut şifrenizi giriniz.",
+    "change_password_title": "Şifre Değiştir",
+    "change_password_desc": "Güvenliğiniz için şifre değişikliği mevcut şifrenizi gerektirir.",
+    "new_password_label": "Yeni Şifre",
+    "new_password_placeholder": "Yeni şifrenizi girin",
+    "confirm_password_label": "Yeni Şifre (Tekrar)",
+    "confirm_password_placeholder": "Yeni şifreyi tekrar girin",
+    "change_password_submit": "Şifreyi Değiştir",
+    "password_mismatch": "Yeni şifreler eşleşmiyor."
   },
   "bireysel": {
     "badge": "Bireysel Bankacılık",

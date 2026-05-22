@@ -755,3 +755,63 @@ class TestAccessControl:
             headers={"X-User-TC": registered_user["tc_no"]},
         )
         assert resp.status_code == 403
+
+
+# =============================================================================
+# 12) ŞİFRE DEĞİŞTİRME TESTLERİ
+# =============================================================================
+
+class TestChangePassword:
+    """Profilden şifre değiştirme — mevcut şifre doğrulaması gerektirir."""
+
+    def test_wrong_current_password_returns_401(self, client, registered_user):
+        """Yanlış mevcut şifre ile değişiklik reddedilmeli (HTTP 401)."""
+        resp = client.post(
+            "/api/change-password",
+            headers={"X-User-TC": registered_user["tc_no"]},
+            json={
+                "tc_no": registered_user["tc_no"],
+                "current_password": "YanlisSifre9!",
+                "new_password": "YeniGuclu1!",
+            },
+        )
+        assert resp.status_code == 401
+
+    def test_weak_new_password_returns_422(self, client, registered_user):
+        """Güçlü olmayan yeni şifre reddedilmeli (HTTP 422)."""
+        resp = client.post(
+            "/api/change-password",
+            headers={"X-User-TC": registered_user["tc_no"]},
+            json={
+                "tc_no": registered_user["tc_no"],
+                "current_password": registered_user["password"],
+                "new_password": "zayif",
+            },
+        )
+        assert resp.status_code == 422
+
+    def test_change_password_success(self, client, registered_user):
+        """Doğru şifre ile değişiklik başarılı; yeni şifre çalışır, eski geçersiz olur."""
+        tc = registered_user["tc_no"]
+        resp = client.post(
+            "/api/change-password",
+            headers={"X-User-TC": tc},
+            json={
+                "tc_no": tc,
+                "current_password": registered_user["password"],
+                "new_password": "YeniGuclu1!",
+            },
+        )
+        assert resp.status_code == 200
+
+        # Yeni şifre ile giriş başarılı olmalı
+        new_login = client.post("/api/login", json={
+            "tc_no": tc, "password": "YeniGuclu1!",
+        })
+        assert new_login.status_code == 200
+
+        # Eski şifre artık geçersiz olmalı
+        old_login = client.post("/api/login", json={
+            "tc_no": tc, "password": registered_user["password"],
+        })
+        assert old_login.status_code == 401

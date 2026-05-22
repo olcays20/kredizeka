@@ -114,7 +114,16 @@
     "access_denied_title": "Access Denied",
     "access_denied_desc": "Only users with admin privileges can access this page.",
     "last_update": "Last update",
-    "stats_load_error": "Could not load statistics"
+    "stats_load_error": "Could not load statistics",
+    "users_title": "User Management",
+    "users_subtitle": "View and manage registered users",
+    "table_actions": "Actions",
+    "delete": "Delete",
+    "delete_confirm_title": "Delete User",
+    "delete_confirm_desc": "You are about to permanently delete {{name}}. All of the user's analysis records will also be deleted, and this action cannot be undone.",
+    "delete_confirm_button": "Yes, Delete",
+    "deleting": "Deleting...",
+    "cancel": "Cancel"
   },
   "footer": {
     "tagline": "A reliable guide for your credit decisions with AI-powered financial risk analysis. Your data is safe, your decisions are informed.",

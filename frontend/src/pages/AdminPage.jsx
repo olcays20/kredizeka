@@ -12,6 +12,7 @@ import { useAuth } from '../hooks/useAuth';
 import {
   LayoutDashboard, Users, Shield, UserCircle, ImageIcon,
   ClipboardCheck, Clock, TrendingUp, RefreshCw, Calendar,
+  Trash2, AlertTriangle, X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -22,20 +23,29 @@ export default function AdminPage() {
   const { t, i18n } = useTranslation();
 
   const [stats, setStats] = useState(null);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Silme onayı bekleyen kullanıcı (modal için) ve silme durumu
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const fetchStats = async (silent = false) => {
+  const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
 
     try {
-      const res = await fetch(`${API}/api/admin/stats`, {
-        headers: { 'X-User-TC': user.tc_no },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'İstatistikler alınamadı.');
-      setStats(data);
+      const headers = { 'X-User-TC': user.tc_no };
+      const [statsRes, usersRes] = await Promise.all([
+        fetch(`${API}/api/admin/stats`, { headers }),
+        fetch(`${API}/api/admin/users`, { headers }),
+      ]);
+      const statsData = await statsRes.json();
+      const usersData = await usersRes.json();
+      if (!statsRes.ok) throw new Error(statsData.detail || 'İstatistikler alınamadı.');
+      if (!usersRes.ok) throw new Error(usersData.detail || 'Kullanıcılar alınamadı.');
+      setStats(statsData);
+      setUsers(usersData.users || []);
     } catch (err) {
       const msg = err instanceof TypeError
         ? 'Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.'
@@ -47,8 +57,36 @@ export default function AdminPage() {
     }
   };
 
+  // Onaylanan kullanıcıyı siler
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`${API}/api/admin/users/${confirmDelete.tc_no}`, {
+        method: 'DELETE',
+        headers: { 'X-User-TC': user.tc_no },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || t('common.unexpected_error'));
+      setUsers((prev) => prev.filter((u) => u.tc_no !== confirmDelete.tc_no));
+      toast.success(data.message);
+      setConfirmDelete(null);
+    } catch (err) {
+      const msg = err instanceof TypeError
+        ? t('common.server_unreachable')
+        : (err.message || t('common.unexpected_error'));
+      toast.error(msg);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // T.C. No'yu görüntü için maskeler (123*****789)
+  const maskTc = (tc) =>
+    (tc && tc.length >= 11) ? `${tc.slice(0, 3)}*****${tc.slice(-3)}` : tc;
+
   useEffect(() => {
-    if (user?.is_admin) fetchStats();
+    if (user?.is_admin) fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -108,7 +146,7 @@ export default function AdminPage() {
             {t('admin.stats_load_error')}
           </h2>
           <button
-            onClick={() => fetchStats()}
+            onClick={() => fetchData()}
             className="btn-primary mt-4 inline-flex items-center gap-2"
           >
             <RefreshCw className="w-4 h-4" />
@@ -149,7 +187,7 @@ export default function AdminPage() {
             </div>
           </div>
           <button
-            onClick={() => fetchStats(true)}
+            onClick={() => fetchData(true)}
             disabled={refreshing}
             className="btn-secondary inline-flex items-center gap-2 self-start md:self-center disabled:opacity-60"
           >
@@ -171,18 +209,18 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* ─── SON KAYIT OLAN KULLANICILAR TABLOSU ─── */}
+        {/* ─── KULLANICI YÖNETİMİ TABLOSU ─── */}
         <div className="card-static overflow-hidden animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
           <div className="p-6 border-b border-slate-100 dark:border-slate-700">
             <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-              {t('admin.recent_users_title')}
+              {t('admin.users_title')}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {t('admin.recent_users_subtitle')}
+              {t('admin.users_subtitle')}
             </p>
           </div>
 
-          {stats.recent_users.length === 0 ? (
+          {users.length === 0 ? (
             <div className="p-10 text-center text-slate-400 dark:text-slate-500 text-sm">
               {t('admin.no_users')}
             </div>
@@ -203,11 +241,14 @@ export default function AdminPage() {
                     <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       {t('admin.table_date')}
                     </th>
+                    <th className="px-6 py-3 text-right text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                      {t('admin.table_actions')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {stats.recent_users.map((u, i) => (
-                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                  {users.map((u) => (
+                    <tr key={u.tc_no} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center flex-shrink-0">
@@ -221,7 +262,7 @@ export default function AdminPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm font-mono text-slate-500 dark:text-slate-400">
-                        {u.tc_no_masked}
+                        {maskTc(u.tc_no)}
                       </td>
                       <td className="px-6 py-4">
                         {u.is_admin ? (
@@ -238,6 +279,18 @@ export default function AdminPage() {
                       <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
                         {formatDate(u.created_at)}
                       </td>
+                      <td className="px-6 py-4 text-right">
+                        {u.is_admin ? (
+                          <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDelete(u)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> {t('admin.delete')}
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -250,6 +303,49 @@ export default function AdminPage() {
         <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-8">
           {t('admin.last_update')}: {formatDate(stats.generated_at)}
         </p>
+
+        {/* ─── SİLME ONAY MODALI ─── */}
+        {confirmDelete && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={() => !deleting && setConfirmDelete(null)}
+          >
+            <div
+              className="card-static p-6 max-w-sm w-full animate-fade-in-up"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center mb-4">
+                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                {t('admin.delete_confirm_title')}
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                {t('admin.delete_confirm_desc', { name: confirmDelete.full_name })}
+              </p>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors disabled:opacity-60"
+                >
+                  {deleting ? (
+                    <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg> {t('admin.deleting')}</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4" /> {t('admin.delete_confirm_button')}</>
+                  )}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  disabled={deleting}
+                  className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border-2 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-60"
+                >
+                  <X className="w-4 h-4" /> {t('admin.cancel')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -114,7 +114,16 @@
     "access_denied_title": "Erişim Reddedildi",
     "access_denied_desc": "Bu sayfaya yalnızca yönetici yetkisine sahip kullanıcılar erişebilir.",
     "last_update": "Son güncelleme",
-    "stats_load_error": "İstatistikler yüklenemedi"
+    "stats_load_error": "İstatistikler yüklenemedi",
+    "users_title": "Kullanıcı Yönetimi",
+    "users_subtitle": "Kayıtlı kullanıcıları görüntüleyin ve yönetin",
+    "table_actions": "İşlemler",
+    "delete": "Sil",
+    "delete_confirm_title": "Kullanıcıyı Sil",
+    "delete_confirm_desc": "{{name}} adlı kullanıcıyı kalıcı olarak silmek üzeresiniz. Kullanıcının tüm analiz kayıtları da silinir ve bu işlem geri alınamaz.",
+    "delete_confirm_button": "Evet, Sil",
+    "deleting": "Siliniyor...",
+    "cancel": "İptal"
   },
   "footer": {
     "tagline": "Yapay zeka destekli finansal risk analizi ile kredi kararlarınızda güvenilir bir rehber. Verileriniz güvende, kararlarınız bilinçli.",

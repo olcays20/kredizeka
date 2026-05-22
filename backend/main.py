@@ -1567,6 +1567,65 @@ async def admin_stats(
     }
 
 
+@app.get("/api/admin/users")
+async def admin_list_users(
+    admin: dict = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Yönetici paneli için kullanıcı listesi (en yeniden eskiye)."""
+    users = db.query(User).order_by(User.id.desc()).limit(200).all()
+    return {
+        "users": [
+            {
+                "tc_no": u.tc_no,
+                "full_name": u.full_name,
+                "email": u.email or "",
+                "email_verified": bool(u.email_verified),
+                "is_admin": bool(u.is_admin),
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+            }
+            for u in users
+        ],
+        "total": len(users),
+    }
+
+
+@app.delete("/api/admin/users/{tc_no}")
+async def admin_delete_user(
+    tc_no: str,
+    admin: dict = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Bir kullanıcıyı (ve ilişkili kayıtlarını) siler.
+
+    Güvenlik: Yönetici hesapları silinemez — bu kural, bir admin'in kendini
+    veya tüm yöneticileri yanlışlıkla silmesini de engeller.
+    """
+    user = db.query(User).filter(User.tc_no == tc_no).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
+    if user.is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Yönetici hesapları silinemez."
+        )
+
+    target_name = user.full_name
+
+    # İlişkili jeton kayıtlarını temizle (her iki veritabanında da güvenli)
+    db.query(PasswordResetToken).filter(PasswordResetToken.tc_no == tc_no).delete()
+    db.query(EmailVerificationToken).filter(EmailVerificationToken.tc_no == tc_no).delete()
+    # Analiz kayıtları, User ilişkilerindeki cascade ile birlikte silinir
+    db.delete(user)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"'{target_name}' adlı kullanıcı kalıcı olarak silindi.",
+    }
+
+
 # =============================================================================
 # Üretim için uvicorn entry point
 # =============================================================================

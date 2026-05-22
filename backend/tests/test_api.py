@@ -639,3 +639,60 @@ class TestEmailVerification:
         assert data["user"]["email"] == f"degisen.{registered_user['tc_no']}@kredizeka.com"
         # Yeni adres yeniden doğrulanmalı
         assert data["user"]["email_verified"] is False
+
+
+# =============================================================================
+# 10) ADMIN KULLANICI YÖNETİMİ TESTLERİ
+# =============================================================================
+
+class TestAdminUserManagement:
+    """Yönetici panelinden kullanıcı listeleme ve silme."""
+
+    ADMIN_TC = "11111111111"
+
+    def test_list_users_requires_admin(self, client, registered_user):
+        """Normal kullanıcı kullanıcı listesine erişememeli (HTTP 403)."""
+        resp = client.get("/api/admin/users", headers={
+            "X-User-TC": registered_user["tc_no"],
+        })
+        assert resp.status_code == 403
+
+    def test_list_users_as_admin(self, client):
+        """Yönetici kullanıcı listesini alabilmeli."""
+        resp = client.get("/api/admin/users", headers={"X-User-TC": self.ADMIN_TC})
+        assert resp.status_code == 200
+        assert "users" in resp.json()
+
+    def test_delete_user_as_admin(self, client, registered_user):
+        """Yönetici normal bir kullanıcıyı silebilmeli; silinen giriş yapamamalı."""
+        tc = registered_user["tc_no"]
+        resp = client.delete(f"/api/admin/users/{tc}", headers={
+            "X-User-TC": self.ADMIN_TC,
+        })
+        assert resp.status_code == 200
+
+        # Silinen kullanıcı artık giriş yapamamalı
+        login = client.post("/api/login", json={
+            "tc_no": tc,
+            "password": registered_user["password"],
+        })
+        assert login.status_code == 401
+
+    def test_delete_admin_forbidden(self, client):
+        """Yönetici hesapları silinememeli (HTTP 403)."""
+        resp = client.delete(f"/api/admin/users/{self.ADMIN_TC}", headers={
+            "X-User-TC": self.ADMIN_TC,
+        })
+        assert resp.status_code == 403
+
+    def test_delete_nonexistent_user_returns_404(self, client):
+        """Var olmayan bir kullanıcının silinmesi HTTP 404 dönmeli."""
+        resp = client.delete("/api/admin/users/99999999999", headers={
+            "X-User-TC": self.ADMIN_TC,
+        })
+        assert resp.status_code == 404
+
+    def test_delete_without_admin_header_returns_401(self, client, registered_user):
+        """Yetki bilgisi olmadan silme reddedilmeli (HTTP 401)."""
+        resp = client.delete(f"/api/admin/users/{registered_user['tc_no']}")
+        assert resp.status_code == 401

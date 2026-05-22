@@ -1,17 +1,7 @@
 /**
- * KrediZeka - Şifremi Unuttum Sayfası (ForgotPasswordPage.jsx)
- * =============================================================
- * Şifre sıfırlama akışının BİRİNCİ adımı.
- *
- * Kullanıcı e-posta adresini girer; backend (/api/forgot-password) bu adrese
- * — kayıtlıysa — 1 saat geçerli bir sıfırlama bağlantısı gönderir.
- *
- * Güvenlik notu:
- *   Backend, e-posta kayıtlı olsa da olmasa da AYNI yanıtı döndürür. Bu yüzden
- *   bu sayfa da her durumda aynı "e-postanızı kontrol edin" ekranını gösterir —
- *   böylece hangi e-postaların kayıtlı olduğu dışarıya sızdırılmaz.
- *
- * Tüm metinler i18n çeviri sisteminden okunur.
+ * Şifremi Unuttum sayfası — şifre sıfırlama akışının 1. adımı.
+ * Kullanıcı e-postasını girer; backend (kayıtlıysa) sıfırlama linki yollar.
+ * Güvenlik gereği e-posta kayıtlı olsun olmasın aynı başarı ekranı gösterilir.
  */
 
 import { useState } from 'react';
@@ -21,21 +11,17 @@ import { Mail, ArrowRight, ArrowLeft, CheckCircle2, KeyRound } from 'lucide-reac
 import toast from 'react-hot-toast';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-// E-posta format doğrulaması için Regex (backend ile aynı mantık)
 const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export default function ForgotPasswordPage() {
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  // İstek başarıyla gönderildiğinde 'true' olur → başarı ekranı gösterilir
   const [sent, setSent] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // İstemci tarafı doğrulama: geçerli e-posta formatı
     if (!EMAIL_REGEX.test(email.trim())) {
       return toast.error(t('forgot_password.validation_email'));
     }
@@ -50,7 +36,6 @@ export default function ForgotPasswordPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || t('common.unexpected_error'));
 
-      // Backend her durumda başarı döner → başarı ekranına geç
       setSent(true);
     } catch (err) {
       const msg = err instanceof TypeError
@@ -71,7 +56,7 @@ export default function ForgotPasswordPage() {
         <div className="card-static p-10">
 
           {sent ? (
-            /* ═══════════ BAŞARI EKRANI ═══════════ */
+            /* Başarı ekranı */
             <div className="text-center">
               <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 mb-4">
                 <CheckCircle2 className="w-8 h-8 text-white" />
@@ -88,7 +73,7 @@ export default function ForgotPasswordPage() {
               </Link>
             </div>
           ) : (
-            /* ═══════════ FORM EKRANI ═══════════ */
+            /* Form ekranı */
             <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30 mb-4">

@@ -1,28 +1,13 @@
 /**
- * KrediZeka - ZekaBot Sohbet Asistanı (ZekaBot.jsx)
- * ===================================================
- * Ekranın sağ altına sabitlenmiş, 7/24 hizmet veren kurgusal bir yapay
- * zeka finans asistanı. Kullanıcının yazdığı soruyu backend'deki
- * '/api/chat' uç noktasına gönderir ve gelen finansal tavsiyeyi gösterir.
- *
- * Mimari notlar:
- *   - Bileşen App.jsx içinde bir kez render edilir → tüm sayfalarda görünür.
- *   - 'fixed bottom-4 right-4' ile her zaman ekranın sağ altında kalır.
- *   - Açık/kapalı durumu (isOpen) yerel state ile yönetilir.
- *   - Karanlık tema (dark mode) tüm yüzeylerde desteklenir.
- *
- * Backend ile sözleşme (API kontratı):
- *   İstek : POST /api/chat   { "message": "..." }
- *   Yanıt : { "success": true, "reply": "...", "intent": "..." }
+ * ZekaBot — sağ alta sabitlenmiş yapay zeka sohbet asistanı.
+ * /api/chat uç noktasına bağlanır; App.jsx içinde tüm sayfalarda render edilir.
  */
 
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, Sparkles, User } from 'lucide-react';
 
-// Backend adresi — üretimde ortam değişkeninden, geliştirmede localhost'tan
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-// Sohbet ilk açıldığında ZekaBot'un gösterdiği karşılama mesajı
 const WELCOME_MESSAGE = {
   role: 'bot',
   text:
@@ -31,8 +16,6 @@ const WELCOME_MESSAGE = {
     'hakkında merak ettiklerinizi sorabilirsiniz.',
 };
 
-// Kullanıcıya kolaylık olsun diye sunulan hazır soru önerileri.
-// Tıklandığında doğrudan ZekaBot'a gönderilir.
 const QUICK_REPLIES = [
   'Kredi notumu nasıl yükseltirim?',
   'Borç/gelir oranı nedir?',
@@ -40,47 +23,27 @@ const QUICK_REPLIES = [
 ];
 
 export default function ZekaBot() {
-  // Sohbet penceresi açık mı?
   const [isOpen, setIsOpen] = useState(false);
-  // Sohbet geçmişi — her öğe: { role: 'bot' | 'user', text: '...' }
   const [messages, setMessages] = useState([WELCOME_MESSAGE]);
-  // Giriş kutusundaki metin
   const [input, setInput] = useState('');
-  // ZekaBot yanıt üretiyor mu? (yazıyor... animasyonu için)
   const [loading, setLoading] = useState(false);
 
-  // Mesaj listesinin en altına otomatik kaydırmak için referans
   const messagesEndRef = useRef(null);
 
-  // Yeni mesaj eklendiğinde veya "yazıyor" durumu değiştiğinde en alta kaydır
+  // Yeni mesajda listenin en altına kaydır
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  /**
-   * Bir mesajı ZekaBot'a gönderir.
-   *
-   * Akış:
-   *   1. Kullanıcı mesajı geçmişe eklenir, giriş kutusu temizlenir.
-   *   2. 'loading' true yapılır → "yazıyor..." animasyonu görünür.
-   *   3. POST /api/chat isteği atılır.
-   *   4. Gelen yanıt (reply) bot mesajı olarak geçmişe eklenir.
-   *   5. Hata olursa kullanıcıya nazik bir hata mesajı gösterilir.
-   *
-   * @param {string} rawText - Gönderilecek ham metin
-   */
   const sendMessage = async (rawText) => {
     const text = rawText.trim();
-    // Boş mesaj gönderme veya halihazırda yanıt beklenirken tekrar gönderme
     if (!text || loading) return;
 
-    // 1) Kullanıcı mesajını ekrana yansıt
     setMessages((prev) => [...prev, { role: 'user', text }]);
     setInput('');
     setLoading(true);
 
     try {
-      // 3) Backend'deki ZekaBot uç noktasına isteği gönder
       const res = await fetch(`${API}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -92,10 +55,8 @@ export default function ZekaBot() {
         throw new Error(data.detail || 'ZekaBot şu an yanıt veremiyor.');
       }
 
-      // 4) ZekaBot yanıtını sohbet geçmişine ekle
       setMessages((prev) => [...prev, { role: 'bot', text: data.reply }]);
     } catch (err) {
-      // 5) Sunucuya ulaşılamazsa veya hata olursa kullanıcıyı bilgilendir
       const message =
         err instanceof TypeError
           ? 'Sunucuya ulaşılamadı. Lütfen internet bağlantınızı kontrol edin.'
@@ -106,7 +67,6 @@ export default function ZekaBot() {
     }
   };
 
-  // Form gönderimi (Enter tuşu veya gönder butonu)
   const handleSubmit = (e) => {
     e.preventDefault();
     sendMessage(input);
@@ -114,7 +74,7 @@ export default function ZekaBot() {
 
   return (
     <>
-      {/* ═══════════ KAPALI DURUM — Yüzen Sohbet Balonu Butonu ═══════════ */}
+      {/* Kapalı durum — yüzen sohbet balonu butonu */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
@@ -128,13 +88,12 @@ export default function ZekaBot() {
                      animate-pulse-glow"
         >
           <MessageCircle className="w-7 h-7" />
-          {/* Çevrimiçi göstergesi — sağ üst köşede yeşil nokta */}
           <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-emerald-400
                            rounded-full border-2 border-white" />
         </button>
       )}
 
-      {/* ═══════════ AÇIK DURUM — Sohbet Penceresi ═══════════ */}
+      {/* Açık durum — sohbet penceresi */}
       {isOpen && (
         <div
           className="fixed bottom-4 right-4 z-50
@@ -146,11 +105,10 @@ export default function ZekaBot() {
                      border border-slate-200 dark:border-slate-700
                      animate-fade-in-up"
         >
-          {/* ─── Başlık (Header) ─────────────────────────────────────── */}
+          {/* Başlık */}
           <div className="flex items-center justify-between px-4 py-3
                           bg-gradient-to-r from-primary-600 to-accent-600 text-white">
             <div className="flex items-center gap-3">
-              {/* Bot avatarı */}
               <div className="relative w-10 h-10 rounded-full bg-white/20
                               flex items-center justify-center">
                 <Bot className="w-6 h-6" />
@@ -175,7 +133,7 @@ export default function ZekaBot() {
             </button>
           </div>
 
-          {/* ─── Mesaj Listesi ───────────────────────────────────────── */}
+          {/* Mesaj listesi */}
           <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3
                           bg-slate-50 dark:bg-slate-900">
             {messages.map((msg, index) => (
@@ -185,7 +143,6 @@ export default function ZekaBot() {
                   msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'
                 }`}
               >
-                {/* Avatar — bot ve kullanıcı için farklı renk/ikon */}
                 <div
                   className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center
                               justify-center ${
@@ -201,7 +158,6 @@ export default function ZekaBot() {
                   )}
                 </div>
 
-                {/* Mesaj balonu */}
                 <div
                   className={`max-w-[75%] px-3.5 py-2.5 text-sm leading-relaxed
                               whitespace-pre-wrap ${
@@ -216,7 +172,7 @@ export default function ZekaBot() {
               </div>
             ))}
 
-            {/* "ZekaBot yazıyor..." animasyonu (yanıt beklenirken) */}
+            {/* "Yazıyor..." animasyonu */}
             {loading && (
               <div className="flex items-end gap-2">
                 <div className="flex-shrink-0 w-8 h-8 rounded-full
@@ -237,7 +193,7 @@ export default function ZekaBot() {
               </div>
             )}
 
-            {/* Hazır soru önerileri — yalnızca sohbetin başında gösterilir */}
+            {/* Hazır soru önerileri — yalnızca sohbetin başında */}
             {messages.length === 1 && !loading && (
               <div className="pt-2 space-y-2">
                 <p className="text-xs text-slate-400 dark:text-slate-500 px-1">
@@ -259,11 +215,10 @@ export default function ZekaBot() {
               </div>
             )}
 
-            {/* Otomatik kaydırma için görünmez bitiş işaretçisi */}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* ─── Giriş Alanı (Mesaj Yazma) ───────────────────────────── */}
+          {/* Giriş alanı */}
           <form
             onSubmit={handleSubmit}
             className="flex items-center gap-2 p-3 border-t

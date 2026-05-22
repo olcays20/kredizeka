@@ -35,43 +35,26 @@ class Settings(BaseSettings):
     cors_origins: str = "*"
 
     # ─── Redis (Önbellek) ────────────────────────────────────────────
-    # fastapi-cache2 bu adres üzerinden Redis'e bağlanır.
-    # Yerel geliştirmede localhost; Docker'da 'redis' servis adıdır.
-    # Redis erişilemezse uygulama otomatik olarak bellek-içi (in-memory)
-    # önbelleğe düşer — bu yüzden Redis olmadan da sistem çalışmaya devam eder.
+    # Erişilemezse uygulama bellek-içi önbelleğe düşer.
     redis_url: str = "redis://localhost:6379"
 
     # ─── ML Modeli ──────────────────────────────────────────────────
     model_path: str = "loan_risk_pipeline.pkl"
 
-    # ─── Gemini (ZekaBot Üretken Yapay Zeka) ────────────────────────
-    # ZekaBot sohbet asistanı, bu anahtar TANIMLIYSA gerçek Google Gemini
-    # API'sini kullanır. Anahtar boşsa (varsayılan), ZekaBot anahtar kelime
-    # eşleştirme tabanlı yerel yedek (fallback) mantığıyla çalışmaya devam eder.
-    #
-    # GÜVENLİK: API anahtarı ASLA koda veya git deposuna yazılmaz. Yalnızca
-    # ortam değişkeni (GEMINI_API_KEY) ile sağlanır — yerelde .env dosyası,
-    # üretimde Render ortam değişkeni olarak tanımlanır.
+    # ─── Gemini (ZekaBot) ───────────────────────────────────────────
+    # Anahtar tanımlıysa ZekaBot gerçek Gemini'yi, yoksa keyword yedeğini kullanır.
     gemini_api_key: str = ""
-    # Kullanılacak Gemini modeli — hız/maliyet için 'flash' sürümü idealdir
     gemini_model: str = "gemini-2.5-flash"
 
     # ─── Brevo (Şifre Sıfırlama E-postası) ──────────────────────────
-    # Brevo (eski adıyla Sendinblue) transactional e-posta servisidir.
-    # brevo_api_key TANIMLIYSA şifre sıfırlama e-postası GERÇEKTEN gönderilir;
-    # boşsa e-posta simüle edilir (sıfırlama linki sunucu log'una yazılır).
-    # GÜVENLİK: Anahtar yalnızca ortam değişkeniyle verilir, koda yazılmaz.
+    # Anahtar tanımlıysa e-posta gerçekten gönderilir, yoksa simüle edilir.
     brevo_api_key: str = ""
-    # Brevo panelinde DOĞRULANMIŞ gönderen e-posta adresi.
-    # Varsayılan, projenin kurumsal destek adresidir; gerekirse ortam
-    # değişkeniyle (BREVO_SENDER_EMAIL) değiştirilebilir.
+    # Brevo panelinde doğrulanmış gönderen adresi.
     brevo_sender_email: str = "kredizeka.destek@gmail.com"
     brevo_sender_name: str = "KrediZeka Destek"
 
     # ─── Frontend Adresi ────────────────────────────────────────────
-    # Şifre sıfırlama linki bu adres üzerinden oluşturulur:
-    #   {frontend_url}/sifre-sifirla?token=XXXX
-    # Yerelde Vite dev sunucusu; üretimde Vercel adresinizdir.
+    # Şifre sıfırlama linki bu adres üzerinden oluşturulur.
     frontend_url: str = "http://localhost:5173"
 
     # ─── Varsayılan Admin ───────────────────────────────────────────
@@ -84,7 +67,6 @@ class Settings(BaseSettings):
     # slowapi için default rate limit (auth uç noktaları için dakikada N istek)
     auth_rate_limit: str = "5/minute"
     analyze_rate_limit: str = "10/minute"
-    # ZekaBot sohbet uç noktası için ayrı (daha cömert) limit
     chat_rate_limit: str = "30/minute"
 
     # Pydantic Settings yapılandırması
@@ -122,16 +104,8 @@ class Settings(BaseSettings):
     )
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
-        """
-        Ortam değişkeni değerlerinin başındaki/sonundaki boşluk ve satır
-        sonu (\\n) karakterlerini temizler.
-
-        Neden gerekli? Render, Vercel gibi panellerde bir değişken değeri
-        yapıştırılırken sona görünmez bir satır sonu karakteri eklenebilir.
-        Örneğin bir API anahtarının sonundaki '\\n', HTTP başlığına (header)
-        konulduğunda "Illegal header value" hatasına yol açar ve istek çöker.
-        Bu doğrulayıcı, böyle kopyala-yapıştır kazalarına karşı koruma sağlar.
-        """
+        # Panele yapıştırılan değerlerin sonuna kaçabilen '\n' gibi görünmez
+        # karakterleri temizler — aksi halde HTTP başlığında hataya yol açar.
         return v.strip() if isinstance(v, str) else v
 
     @property

@@ -40,20 +40,14 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-# ─── Redis Önbellek (fastapi-cache2) ─────────────────────────────────────
-# FastAPICache  : Önbellek altyapısının merkezi yöneticisidir (singleton).
-# RedisBackend  : Önbelleği Redis sunucusunda saklar (üretim için ideal).
-# InMemoryBackend: Redis erişilemezse devreye giren bellek-içi yedek.
-# cache         : Endpoint'lere takılan dekoratör (@cache(expire=60)).
+# Redis önbellek (fastapi-cache2)
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from fastapi_cache.backends.inmemory import InMemoryBackend
 from fastapi_cache.decorator import cache
 from redis import asyncio as aioredis
 
-# ─── Google Gemini (ZekaBot Üretken Yapay Zeka) ──────────────────────────
-# genai        : Gemini API istemcisi (google-genai SDK)
-# genai_types  : İstek yapılandırma tipleri (GenerateContentConfig vb.)
+# ZekaBot için Google Gemini SDK
 from google import genai
 from google.genai import types as genai_types
 
@@ -89,12 +83,7 @@ ml_bundle: Optional[dict] = None
 MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), settings.model_path)
 
 
-# =============================================================================
-# REDIS İSTEMCİSİ (Singleton)
-# =============================================================================
-# Uygulama açılışında (lifespan) Redis'e bağlanmayı dener. Başarılı olursa
-# bu değişken aktif istemciyi tutar; kapanışta bağlantıyı düzgünce kapatmak
-# için saklanır. Redis erişilemezse None kalır (in-memory önbellek devreye girer).
+# Redis istemcisi — lifespan'de bağlanır, bağlanamazsa None kalır.
 redis_client: Optional["aioredis.Redis"] = None
 
 
@@ -148,24 +137,14 @@ def init_database() -> None:
 
 
 def _legacy_migrate() -> None:
-    """
-    Var olan tablolara, ORM'e sonradan eklenen kolonları ekler.
-
-    Base.metadata.create_all yalnızca YENİ tabloları oluşturur; var olan bir
-    tabloya yeni kolon EKLEMEZ. Bu yüzden sonradan eklenen 'email' gibi
-    kolonlar için elle ALTER TABLE çalıştırılır. Bu işlem hem PostgreSQL
-    (üretim) hem SQLite (yerel) için güvenlidir.
-    """
+    """Var olan tablolara sonradan eklenen kolonları ALTER TABLE ile ekler."""
     inspector = inspect(engine)
     if "users" not in inspector.get_table_names():
-        return  # Tablo henüz yok — create_all doğru şemayla oluşturacak
+        return
 
     existing_cols = {col["name"] for col in inspector.get_columns("users")}
 
-    # ─── Cross-database migration: 'email' kolonu ──────────────────────
-    # "VARCHAR(255) NOT NULL DEFAULT ''" sözdizimi hem PostgreSQL hem SQLite'da
-    # geçerlidir. Var olan satırlar boş e-posta ('') ile doldurulur — böylece
-    # daha önce kaydolmuş kullanıcılar etkilenmez.
+    # 'email' kolonu — hem PostgreSQL hem SQLite'da geçerli sözdizimi
     if "email" not in existing_cols:
         with engine.begin() as conn:
             conn.execute(text(
@@ -173,9 +152,7 @@ def _legacy_migrate() -> None:
             ))
         print("🔄 Migration: 'email' kolonu users tablosuna eklendi.")
 
-    # ─── Yalnızca eski SQLite kurulumları için ek kolonlar ─────────────
-    # Bu kolonlar SQLite'a özgü tiplerle (INTEGER/TEXT) eklenir; PostgreSQL'de
-    # create_all zaten doğru tiplerle oluşturduğu için gerekli değildir.
+    # Yalnızca eski SQLite kurulumları için ek kolonlar
     if settings.database_url.startswith("sqlite"):
         sqlite_migrations = {
             "profile_picture": "ALTER TABLE users ADD COLUMN profile_picture TEXT DEFAULT ''",
@@ -193,27 +170,12 @@ def _legacy_migrate() -> None:
 # PYDANTIC ŞEMALAR
 # =============================================================================
 
-# E-posta adresi format doğrulaması için basit Regex deseni.
-# Mantık: "@ içermeyen 1+ karakter" + "@" + "@ içermeyen 1+ karakter" + "."
-# + "@ ve nokta içermeyen 1+ karakter" (örn. ad@alan.com).
+# E-posta format deseni (ad@alan.com)
 _EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def _validate_password_strength(v: str) -> str:
-    """
-    Şifrenin "güçlü parola" kriterlerini sağladığını doğrular.
-
-    Kriterler:
-      • En az 8 karakter
-      • En az bir BÜYÜK harf
-      • En az bir küçük harf
-      • En az bir rakam
-      • En az bir özel karakter (harf, rakam ve boşluk dışındaki herhangi bir karakter)
-
-    Kriterlerden biri bile sağlanmazsa, hangi kuralın ihlal edildiğini açıkça
-    belirten bir ValueError fırlatır. Bu fonksiyon hem kayıt (register) hem de
-    şifre sıfırlama (reset-password) akışlarında ortak olarak kullanılır.
-    """
+    """Güçlü parola kriterlerini doğrular; sağlanmazsa ValueError fırlatır."""
     if len(v) < 8:
         raise ValueError("Şifre en az 8 karakter olmalıdır.")
     if not any(c.isupper() for c in v):
@@ -248,11 +210,9 @@ class RegisterRequest(BaseModel):
     @field_validator("email")
     @classmethod
     def validate_email(cls, v: str) -> str:
-        """E-posta adresinin geçerli bir formatta olduğunu doğrular."""
         v = v.strip()
         if not _EMAIL_REGEX.match(v):
             raise ValueError("Geçerli bir e-posta adresi giriniz (örn. ad@alan.com).")
-        # E-posta adresleri büyük/küçük harf duyarsızdır; küçük harfe normalize edilir
         return v.lower()
 
     @field_validator("phone")
@@ -265,7 +225,6 @@ class RegisterRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def validate_password(cls, v: str) -> str:
-        """Kayıt sırasında güçlü parola kriterlerini uygular."""
         return _validate_password_strength(v)
 
 
@@ -275,29 +234,18 @@ class LoginRequest(BaseModel):
 
 
 class ForgotPasswordRequest(BaseModel):
-    """
-    "Şifremi Unuttum" akışının ilk adımı — sıfırlama bağlantısı talebi.
-
-    email : Kullanıcının kayıtlı e-posta adresi. Bu adrese sıfırlama linki
-            gönderilir (kullanıcı varsa).
-    """
+    """Şifre sıfırlama bağlantısı talebi."""
     email: str = Field(..., min_length=5, max_length=255)
 
 
 class ResetPasswordRequest(BaseModel):
-    """
-    "Şifremi Unuttum" akışının ikinci adımı — yeni şifrenin belirlenmesi.
-
-    token        : E-postadaki sıfırlama linkinden gelen güvenli jeton.
-    new_password : Kullanıcının belirlediği yeni şifre (min. 6 karakter).
-    """
+    """E-postadaki jeton ile yeni şifrenin belirlenmesi."""
     token: str = Field(..., min_length=10, max_length=255)
     new_password: str = Field(..., max_length=100)
 
     @field_validator("new_password")
     @classmethod
     def validate_new_password(cls, v: str) -> str:
-        """Şifre sıfırlama sırasında güçlü parola kriterlerini uygular."""
         return _validate_password_strength(v)
 
 
@@ -379,39 +327,17 @@ class UrunAnalyzeRequest(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    """
-    ZekaBot sohbet asistanı isteği.
-
-    message : Kullanıcının ZekaBot'a yazdığı serbest metin sorusu.
-              (1-500 karakter — boş mesaj ve aşırı uzun girdi engellenir)
-    """
-    message: str = Field(..., min_length=1, max_length=500,
-                         description="Kullanıcının sohbet mesajı")
+    """ZekaBot sohbet asistanı isteği."""
+    message: str = Field(..., min_length=1, max_length=500)
 
 
 # =============================================================================
 # UYGULAMA YAŞAM DÖNGÜSÜ (LIFESPAN)
 # =============================================================================
-# Modern FastAPI'de 'startup'/'shutdown' olayları yerine 'lifespan' context
-# manager kullanılır. 'yield' ifadesinden ÖNCEKİ kod sunucu açılırken,
-# SONRAKİ kod sunucu kapanırken bir kez çalışır.
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Sunucunun açılış ve kapanış adımlarını yöneten yaşam döngüsü fonksiyonu.
-
-    Açılışta (yield öncesi):
-      1. Veritabanı şeması hazırlanır + ilk admin oluşturulur.
-      2. ML modeli (XGBoost + SHAP) belleğe yüklenir.
-      3. Redis önbelleği başlatılır — Redis yoksa bellek-içi yedeğe düşülür.
-
-    Kapanışta (yield sonrası):
-      • Açık Redis bağlantısı düzgünce kapatılır.
-
-    Tüm adımlar try/except ile sarılıdır: biri çökerse bile uvicorn ayağa
-    kalkmaya devam eder ve sağlık uç noktaları yanıt verir.
-    """
+    """Açılışta DB + ML modeli + Redis hazırlar, kapanışta Redis'i kapatır."""
     global ml_bundle, redis_client
 
     print("\n" + "=" * 60)
@@ -420,7 +346,7 @@ async def lifespan(app: FastAPI):
     print(f"   • CORS       : {settings.cors_origin_list}")
     print("=" * 60)
 
-    # ─── 1) Veritabanı şeması ──────────────────────────────────────────
+    # 1) Veritabanı şeması
     try:
         init_database()
     except Exception as e:
@@ -428,14 +354,10 @@ async def lifespan(app: FastAPI):
         import traceback
         traceback.print_exc()
 
-    # ─── 2) ML modeli yükle (varsa) ────────────────────────────────────
-    # Render gibi düşük bellekli ortamlarda startup'ta eğitim yapmıyoruz;
-    # model dosyası yoksa /api/analyze 503 döner, diğer uçlar çalışır.
+    # 2) ML modeli yükle (yoksa /api/analyze 503 döner)
     try:
         if os.path.exists(MODEL_PATH):
             loaded = joblib.load(MODEL_PATH)
-            # Eski format kontrolü: v1 modelinde {"model": ...} vardı,
-            # v2'de {"pipeline": ..., "explainer": ...}. Uyumsuzsa atla.
             if isinstance(loaded, dict) and "pipeline" in loaded and "explainer" in loaded:
                 ml_bundle = loaded
                 metrics = ml_bundle.get("metrics", {})
@@ -455,36 +377,28 @@ async def lifespan(app: FastAPI):
         import traceback
         traceback.print_exc()
 
-    # ─── 3) Redis önbelleğini başlat ───────────────────────────────────
-    # Önce gerçek Redis sunucusuna bağlanmayı deneriz (üretim senaryosu).
-    # Bağlantı kurulamazsa (ör. yerel test, Redis kapalı) uygulama çökmez:
-    # bellek-içi (in-memory) önbelleğe otomatik düşülür. Böylece '@cache'
-    # dekoratörü her ortamda — Redis olsa da olmasa da — çalışmaya devam eder.
+    # 3) Redis önbelleği — bağlanamazsa bellek-içi yedeğe düşülür
     try:
         redis_client = aioredis.from_url(
             settings.redis_url,
             encoding="utf-8",
-            decode_responses=False,   # RedisBackend ham bayt (bytes) bekler
+            decode_responses=False,   # RedisBackend bytes bekler
         )
-        # ping(): Redis gerçekten ayakta mı? Bağlantı yoksa burada hata fırlar.
         await redis_client.ping()
         FastAPICache.init(RedisBackend(redis_client), prefix="fastapi-cache")
         print(f"✅ Redis önbellek bağlandı → {settings.redis_url}")
     except Exception as e:
-        # Yedek plan: Redis yok → bellek-içi önbellek devreye girer
         redis_client = None
         FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
         print(f"⚠️  Redis erişilemedi ({type(e).__name__}). "
-              f"Bellek-içi (in-memory) önbellek devreye alındı.")
+              f"Bellek-içi önbellek devreye alındı.")
 
     print("\n✅ Sunucu hazır → http://localhost:8000")
     print("📖 API Docs    → http://localhost:8000/docs")
     print("=" * 60 + "\n")
 
-    # ─── Sunucu burada isteklere hizmet verir ──────────────────────────
     yield
 
-    # ─── KAPANIŞ ───────────────────────────────────────────────────────
     print("\n🔴 KrediZeka API Sunucusu kapatılıyor...")
     if redis_client is not None:
         try:
@@ -634,26 +548,14 @@ async def forgot_password(
     db: Session = Depends(get_db),
 ):
     """
-    Şifre sıfırlama akışını başlatır.
+    Şifre sıfırlama akışını başlatır: jeton üretir ve e-postayla link yollar.
 
-    İşleyiş:
-      1. E-posta adresine sahip kullanıcı aranır.
-      2. Kullanıcı varsa: güvenli rastgele bir jeton üretilir, veritabanına
-         1 saat geçerli olacak şekilde kaydedilir ve e-postayla sıfırlama
-         linki gönderilir (arka planda — kullanıcı bekletilmez).
-      3. Aynı kullanıcının daha önceki kullanılmamış jetonları iptal edilir
-         (yalnızca en son gönderilen link geçerli kalır).
-
-    GÜVENLİK: E-posta kayıtlı olsa da olmasa da AYNI yanıt döner. Bu, saldırganın
-    hangi e-postaların sisteme kayıtlı olduğunu öğrenmesini (user enumeration)
-    engeller.
-
-    Rate limit: settings.auth_rate_limit
+    Güvenlik: E-posta kayıtlı olsa da olmasa da aynı yanıt döner — böylece
+    hangi e-postaların kayıtlı olduğu sızdırılmaz (user enumeration koruması).
     """
-    # Kayıt sırasında e-postalar küçük harfe normalize edilir; burada da uygula
     email = req.email.strip().lower()
 
-    # Her durumda dönecek ortak yanıt (kayıtlı e-postaları sızdırmamak için)
+    # Kayıtlı e-postaları sızdırmamak için her durumda aynı yanıt
     generic_response = {
         "success": True,
         "message": "Eğer bu e-posta adresi sistemde kayıtlıysa, şifre sıfırlama "
@@ -662,16 +564,14 @@ async def forgot_password(
 
     user = db.query(User).filter(User.email == email).first()
     if not user:
-        # Kullanıcı yok — yine de başarı yanıtı dön (enumeration koruması)
         return generic_response
 
-    # Bu kullanıcının önceki kullanılmamış jetonlarını iptal et
+    # Önceki kullanılmamış jetonları iptal et — yalnızca son link geçerli kalsın
     db.query(PasswordResetToken).filter(
         PasswordResetToken.tc_no == user.tc_no,
         PasswordResetToken.used.is_(False),
     ).update({"used": True})
 
-    # Kriptografik olarak güvenli, benzersiz bir jeton üret
     token = secrets.token_urlsafe(32)
     reset_record = PasswordResetToken(
         tc_no=user.tc_no,
@@ -682,7 +582,6 @@ async def forgot_password(
     db.add(reset_record)
     db.commit()
 
-    # Sıfırlama linkini oluştur ve e-postayı arka planda gönder
     reset_link = f"{settings.frontend_url.rstrip('/')}/sifre-sifirla?token={token}"
     background_tasks.add_task(
         send_password_reset_email, user.email, user.full_name, reset_link
@@ -700,30 +599,19 @@ async def reset_password(
     db: Session = Depends(get_db),
 ):
     """
-    Sıfırlama jetonunu doğrular ve kullanıcının şifresini günceller.
-
-    Jeton şu üç koşulun TAMAMINI sağlamalıdır:
-      1. Veritabanında var olmalı (geçerli bir jeton).
-      2. Daha önce kullanılmamış olmalı (tek kullanımlık güvenlik).
-      3. Süresi dolmamış olmalı (expires_at > şu an).
-
-    Hepsi sağlanırsa şifre yeniden hash'lenip kaydedilir ve jeton "kullanıldı"
-    olarak işaretlenir (aynı linkin ikinci kez kullanılması engellenir).
-
-    Rate limit: settings.auth_rate_limit
+    Sıfırlama jetonunu doğrular (var/kullanılmamış/süresi dolmamış) ve
+    geçerliyse kullanıcının şifresini günceller; jetonu kullanıldı işaretler.
     """
     reset_record = db.query(PasswordResetToken).filter(
         PasswordResetToken.token == req.token
     ).first()
 
-    # 1) Jeton veritabanında var mı?
     if not reset_record:
         raise HTTPException(
             status_code=400,
             detail="Geçersiz sıfırlama bağlantısı. Lütfen yeniden talep edin."
         )
 
-    # 2) Jeton daha önce kullanılmış mı?
     if reset_record.used:
         raise HTTPException(
             status_code=400,
@@ -731,7 +619,6 @@ async def reset_password(
                    "Lütfen yeni bir bağlantı talep edin."
         )
 
-    # 3) Jetonun süresi dolmuş mu?
     if reset_record.expires_at < datetime.utcnow():
         raise HTTPException(
             status_code=400,
@@ -739,7 +626,6 @@ async def reset_password(
                    "Lütfen yeniden talep edin."
         )
 
-    # Jetonun sahibi kullanıcıyı bul
     user = db.query(User).filter(User.tc_no == reset_record.tc_no).first()
     if not user:
         raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
@@ -1192,21 +1078,10 @@ async def analytics_history(tc_no: str, db: Session = Depends(get_db)):
 
 
 # =============================================================================
-# ZEKABOT — ÜRETKEN YAPAY ZEKA SOHBET ASİSTANI (SİMÜLASYON)
+# ZEKABOT — SOHBET ASİSTANI
 # =============================================================================
-# Gerçek bir LLM (OpenAI vb.) API anahtarı KULLANILMADAN, fintek terimlerini
-# tanıyan kurgusal bir sohbet asistanı. Anahtar kelime eşleştirme (keyword
-# matching) tabanlı basit bir Doğal Dil İşleme (NLP) mantığı çalıştırır.
-#
-# Üretim mimarisine uygunluk:
-#   Gerçek bir sistemde burası bir LLM çağrısı olurdu. Sözleşme (API kontratı)
-#   birebir aynı kaldığından, ileride bu fonksiyonun içi gerçek bir model
-#   çağrısıyla değiştirilse frontend'de hiçbir değişiklik gerekmez.
 
-# ZekaBot'un tanıdığı niyetler (intent). Her kayıt:
-#   keywords → mesajda aranacak anahtar kelimeler (herhangi biri eşleşirse)
-#   intent   → niyetin kısa kimliği (loglama/analitik için)
-#   reply    → kullanıcıya döndürülecek finansal tavsiye metni
+# Keyword tabanlı yedek niyetler — Gemini erişilemezse kullanılır.
 _ZEKABOT_INTENTS = [
     {
         "keywords": ["merhaba", "selam", "gunaydin", "günaydın", "iyi gunler",
@@ -1288,9 +1163,8 @@ _ZEKABOT_INTENTS = [
         ),
     },
     {
-        # NOT: 'about' niyeti, 'loan_application'dan ÖNCE gelmelidir. Aksi
-        # halde "KrediZeka nedir?" sorusundaki 'kredizeka' kelimesi, içinde
-        # 'kredi' geçtiği için yanlışlıkla 'loan_application' ile eşleşir.
+        # 'about', 'loan_application'dan önce gelmeli: "kredizeka" içinde
+        # "kredi" geçtiği için aksi halde yanlış eşleşir.
         "keywords": ["kredizeka", "sen kimsin", "ne yapabilirsin", "nedir",
                      "yardım", "yardim", "ne işe yarar", "kimsin"],
         "intent": "about",
@@ -1335,14 +1209,7 @@ _ZEKABOT_FALLBACK = (
 
 
 def _normalize_tr(text: str) -> str:
-    """
-    Sohbet mesajını anahtar kelime eşleştirmesine hazırlar.
-
-    Türkçe büyük 'İ' harfi standart .lower() ile sorunlu olabildiğinden,
-    önce bilinen Türkçe büyük harfler küçük karşılıklarına çevrilir,
-    ardından tüm metin küçük harfe indirilir. Böylece kullanıcı büyük/küçük
-    harf nasıl yazarsa yazsın eşleştirme tutarlı çalışır.
-    """
+    """Mesajı küçük harfe indirir (Türkçe karakter düzeltmesiyle)."""
     replacements = {"İ": "i", "I": "ı", "Ş": "ş", "Ğ": "ğ",
                     "Ü": "ü", "Ö": "ö", "Ç": "ç"}
     for big, small in replacements.items():
@@ -1351,19 +1218,7 @@ def _normalize_tr(text: str) -> str:
 
 
 def _zekabot_generate_reply(message: str) -> dict:
-    """
-    Kullanıcı mesajını analiz edip uygun finansal tavsiyeyi üretir.
-
-    Çalışma mantığı (basit NLP / keyword matching):
-      1. Mesaj normalize edilir (küçük harf, Türkçe karakter düzeltmesi).
-      2. Tanımlı niyetler (_ZEKABOT_INTENTS) sırayla taranır.
-      3. Niyetin anahtar kelimelerinden HERHANGİ BİRİ mesajda geçiyorsa,
-         o niyetin hazır yanıtı döndürülür (ilk eşleşen kazanır).
-      4. Hiçbiri eşleşmezse yönlendirici bir varsayılan yanıt verilir.
-
-    Returns:
-        dict: { "reply": <metin>, "intent": <niyet kimliği> }
-    """
+    """Mesajı niyetlerle eşleştirir; eşleşme yoksa fallback döner."""
     normalized = _normalize_tr(message)
 
     for entry in _ZEKABOT_INTENTS:
@@ -1371,14 +1226,10 @@ def _zekabot_generate_reply(message: str) -> dict:
             if keyword in normalized:
                 return {"reply": entry["reply"], "intent": entry["intent"]}
 
-    # Eşleşme yok → kullanıcıyı doğru konulara yönlendiren varsayılan yanıt
     return {"reply": _ZEKABOT_FALLBACK, "intent": "fallback"}
 
 
-# ─── Gemini (Gerçek Üretken Yapay Zeka) Entegrasyonu ─────────────────────
-# ZekaBot'un Gemini modeline verdiği rol talimatı (system instruction).
-# Bu metin, modelin kimliğini, görev alanını ve uyması gereken kuralları
-# belirler — modelin "ZekaBot gibi" davranmasını sağlar.
+# Gemini'ye verilen rol talimatı (system instruction)
 _GEMINI_SYSTEM_PROMPT = (
     "Sen ZekaBot'sun — 'KrediZeka' adlı yapay zeka destekli finansal risk "
     "analizi platformunun sohbet asistanısın. Kullanıcılara kredi, kredi notu, "
@@ -1398,33 +1249,17 @@ _GEMINI_SYSTEM_PROMPT = (
 
 
 def _call_gemini(message: str) -> str:
-    """
-    Google Gemini API'sini çağırıp kullanıcı mesajına gerçek bir LLM yanıtı üretir.
-
-    Bu fonksiyon SENKRON (bloklayıcı) çalışır; bu yüzden endpoint içinde
-    'run_in_threadpool' ile ayrı bir iş parçacığında çağrılır. Böylece Gemini
-    yanıt verene kadar sunucunun olay döngüsü (event loop) bloke olmaz ve
-    diğer istekler hizmet almaya devam eder.
-
-    Hata durumunda (ağ hatası, geçersiz anahtar, kota dolması) istisna fırlatır;
-    çağıran taraf bunu yakalayıp anahtar kelime tabanlı yedek mantığa geçer.
-
-    Returns:
-        str: Gemini'nin ürettiği yanıt metni.
-    """
-    # Her çağrıda hafif bir istemci oluşturulur (yalnızca anahtarı saklar)
+    """Gemini API'sini çağırır (senkron — threadpool'da çalıştırılır)."""
     client = genai.Client(api_key=settings.gemini_api_key)
     response = client.models.generate_content(
         model=settings.gemini_model,
         contents=message,
         config=genai_types.GenerateContentConfig(
             system_instruction=_GEMINI_SYSTEM_PROMPT,
-            temperature=0.7,          # yaratıcılık / tutarlılık dengesi
-            max_output_tokens=800,    # yanıt uzunluğu üst sınırı
-            # thinking_budget=0: Gemini 2.5 modellerinin "düşünme" (thinking)
-            # aşamasını kapatır. Kısa sohbet yanıtları için düşünme gereksizdir;
-            # kapatınca yanıt hem daha hızlı gelir hem de token bütçesinin
-            # tamamı görünür metne ayrılır (yanıt yarıda kesilmez).
+            temperature=0.7,
+            max_output_tokens=800,
+            # thinking_budget=0: Gemini 2.5'in düşünme aşamasını kapatır —
+            # yanıt yarıda kesilmez, daha hızlı gelir.
             thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
         ),
     )
@@ -1435,28 +1270,14 @@ def _call_gemini(message: str) -> str:
 @limiter.limit(settings.chat_rate_limit)
 async def chat(request: Request, req: ChatRequest):
     """
-    ZekaBot sohbet asistanı uç noktası.
+    ZekaBot uç noktası.
 
-    Çalışma stratejisi (iki katmanlı — kademeli azalma / graceful degradation):
-
-      1. ÖNCE GERÇEK YAPAY ZEKA: settings.gemini_api_key tanımlıysa, kullanıcı
-         mesajı Google Gemini API'sine gönderilir ve gerçek bir LLM yanıtı
-         üretilir. Yapay gecikme eklenmez — Gemini'nin kendi yanıt süresi
-         arayüzdeki "yazıyor..." animasyonunu zaten anlamlı kılar.
-
-      2. YEDEK PLAN (FALLBACK): Anahtar tanımlı DEĞİLSE veya Gemini çağrısı
-         herhangi bir nedenle başarısız olursa (ağ hatası, kota, zaman aşımı),
-         anahtar kelime eşleştirme tabanlı yerel mantık devreye girer.
-
-    Bu sayede uygulama, Gemini anahtarı olsun ya da olmasın kesintisiz çalışır.
-
-    Rate limit: settings.chat_rate_limit (varsayılan 30/dakika, IP başına)
+    Önce Gemini denenir; anahtar yoksa veya çağrı başarısız olursa keyword
+    tabanlı yedeğe düşülür — böylece her durumda yanıt döner.
     """
-    # ─── 1) Gemini yapılandırılmışsa gerçek yapay zekayı dene ──────────
+    # 1) Gemini'yi dene (20 sn zaman aşımı)
     if settings.gemini_api_key:
         try:
-            # Bloklayıcı Gemini çağrısı threadpool'da; 20 sn zaman aşımı korur.
-            # Gemini yanıt vermezse asyncio.wait_for TimeoutError fırlatır.
             reply = await asyncio.wait_for(
                 run_in_threadpool(_call_gemini, req.message),
                 timeout=20.0,
@@ -1469,12 +1290,10 @@ async def chat(request: Request, req: ChatRequest):
                     "source": "gemini",
                 }
         except Exception as e:
-            # Gemini başarısız → logla ve sessizce yedek mantığa geç
             print(f"⚠️  Gemini çağrısı başarısız ({type(e).__name__}: {e}). "
                   f"Anahtar kelime yedeğine geçiliyor.")
 
-    # ─── 2) Yedek plan: anahtar kelime eşleştirme tabanlı NLP ──────────
-    # Model "düşünüyormuş" hissi için yapay 1 saniyelik asenkron gecikme
+    # 2) Yedek: keyword eşleştirme (sahte "düşünme" gecikmesiyle)
     await asyncio.sleep(1.0)
     payload = _zekabot_generate_reply(req.message)
     return {
@@ -1516,15 +1335,10 @@ def admin_stats_cache_key(
     kwargs=None,
 ) -> str:
     """
-    /api/admin/stats için sabit önbellek anahtarı üretir.
+    /api/admin/stats için sabit önbellek anahtarı.
 
-    Neden özel bir anahtar üreticisi (key builder) gerekir?
-      fastapi-cache2'nin varsayılan anahtarı, fonksiyonun argümanlarını
-      (db oturumu, admin sözlüğü vb.) de hesaba katar. 'db' her istekte yeni
-      bir nesne olduğundan, varsayılan anahtar her seferinde değişir ve
-      önbellek hiçbir zaman İSABET (cache hit) etmez. Burada argümanları
-      tamamen yok sayıp sabit bir anahtar döndürerek, istatistiklerin
-      gerçekten 60 saniye boyunca önbellekte kalmasını garanti ediyoruz.
+    Varsayılan anahtar üretici argümanları (her istekte değişen db oturumu
+    gibi) hesaba kattığından önbellek hiç isabet etmez; sabit anahtar bunu çözer.
     """
     return f"{namespace}:admin-stats:v1"
 
@@ -1535,21 +1349,7 @@ async def admin_stats(
     admin: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    """
-    Yönetici paneli için sistem istatistikleri.
-
-    Performans notu — Redis Önbellekleme:
-      Bu uç nokta '@cache(expire=60)' ile sarılıdır. İlk çağrıda istatistikler
-      PostgreSQL'den hesaplanıp Redis'e yazılır; sonraki 60 saniye boyunca
-      gelen tüm istekler doğrudan Redis belleğinden (milisaniyeler içinde)
-      yanıtlanır. Bu, sık yenilenen admin panelinde veritabanı yükünü
-      ciddi biçimde azaltır.
-
-    Güvenlik notu:
-      'require_admin' bağımlılığı, önbellekten ÖNCE çalışır. Yani admin
-      olmayan bir kullanıcı 403 alır ve önbelleğe asla erişemez — önbellek
-      yalnızca yetkili çağrıların başarılı yanıtını paylaşır.
-    """
+    """Yönetici paneli istatistikleri — 60 sn önbelleklenir."""
     total_users = db.query(User).count()
     total_admins = db.query(User).filter(User.is_admin.is_(True)).count()
     regular_users = total_users - total_admins

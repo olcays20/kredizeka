@@ -57,8 +57,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     tc_no = Column(String(11), unique=True, nullable=False, index=True)
     full_name = Column(String(100), nullable=False)
-    # E-posta adresi — kayıt sırasında alınır. Var olan eski kayıtlarda boş
-    # ('') olabileceğinden unique kısıtı uygulanmaz (birden çok boş değere izin).
+    # Eski kayıtlarda boş olabileceğinden unique kısıtı yok.
     email = Column(String(255), default="", nullable=False)
     phone = Column(String(11), nullable=False)
     password_hash = Column(String(255), nullable=False)
@@ -231,25 +230,7 @@ class UrunlerAnalytics(Base):
 
 
 class PasswordResetToken(Base):
-    """
-    'password_reset_tokens' tablosu — Şifre sıfırlama jetonları.
-
-    Kullanıcı "Şifremi Unuttum" akışını başlattığında bir satır oluşturulur.
-    E-posta ile gönderilen sıfırlama linki bu tablodaki 'token' değerini taşır.
-
-    Sütunlar:
-      - id          : Otomatik artan PK
-      - tc_no       : users.tc_no'ya Foreign Key (jetonun sahibi kullanıcı)
-      - token       : Kriptografik olarak güvenli, benzersiz rastgele dizi
-      - expires_at  : Jetonun son geçerlilik anı (UTC) — genelde +1 saat
-      - used        : Jeton kullanıldıysa True (tek kullanımlık güvenlik)
-      - created_at  : Jetonun oluşturulma anı (UTC)
-
-    Güvenlik notu:
-      Bir jeton yalnızca BİR kez kullanılabilir ('used' bayrağı) ve süresi
-      dolduğunda ('expires_at') geçersiz sayılır. Bu, çalınan veya eski bir
-      linkin sınırsızca kullanılmasını engeller.
-    """
+    """Şifre sıfırlama jetonları — tek kullanımlık, süreli (expires_at)."""
 
     __tablename__ = "password_reset_tokens"
 

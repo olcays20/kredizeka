@@ -1,16 +1,6 @@
 /**
- * KrediZeka - Yeni Şifre Belirleme Sayfası (ResetPasswordPage.jsx)
- * =================================================================
- * Şifre sıfırlama akışının İKİNCİ adımı.
- *
- * Kullanıcı, e-postasındaki sıfırlama bağlantısına tıklayarak bu sayfaya gelir.
- * Bağlantı, URL'de bir 'token' sorgu parametresi taşır:
- *   /sifre-sifirla?token=XXXXXXXX
- *
- * Kullanıcı yeni şifresini (iki kez, doğrulama için) girer; backend
- * (/api/reset-password) jetonu doğrular ve şifreyi günceller.
- *
- * Tüm metinler i18n çeviri sisteminden okunur.
+ * Yeni Şifre Belirleme sayfası — şifre sıfırlama akışının 2. adımı.
+ * URL'deki ?token=... değeriyle gelir; kullanıcı yeni şifresini iki kez girer.
  */
 
 import { useState } from 'react';
@@ -26,7 +16,6 @@ export default function ResetPasswordPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  // URL'deki ?token=... değerini oku — sıfırlama jetonu buradadır
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
 
@@ -36,7 +25,6 @@ export default function ResetPasswordPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // İstemci tarafı doğrulamalar
     if (!isStrongPassword(form.password)) {
       return toast.error(t('password_rules.weak_error'));
     }
@@ -54,7 +42,6 @@ export default function ResetPasswordPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || t('common.unexpected_error'));
 
-      // Başarılı → kullanıcıyı bilgilendir ve giriş sayfasına yönlendir
       toast.success(t('reset_password.success_toast'));
       setTimeout(() => navigate('/giris'), 1800);
     } catch (err) {
@@ -76,7 +63,7 @@ export default function ResetPasswordPage() {
         <div className="card-static p-10">
 
           {!token ? (
-            /* ═══════════ GEÇERSİZ / EKSİK TOKEN EKRANI ═══════════ */
+            /* Token eksik / geçersiz ekranı */
             <div className="text-center">
               <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/30 mb-4">
                 <AlertTriangle className="w-8 h-8 text-white" />
@@ -93,7 +80,7 @@ export default function ResetPasswordPage() {
               </Link>
             </div>
           ) : (
-            /* ═══════════ YENİ ŞİFRE FORMU ═══════════ */
+            /* Yeni şifre formu */
             <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30 mb-4">

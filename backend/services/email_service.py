@@ -104,33 +104,15 @@ def send_login_notification(recipient: str, full_name: str, ip: str = "unknown")
 
 
 # =============================================================================
-# GERÇEK E-POSTA GÖNDERİMİ — BREVO (Transactional Email API)
+# GERÇEK E-POSTA GÖNDERİMİ — BREVO
 # =============================================================================
-# Yukarıdaki fonksiyonlar yalnızca log yazar (simülasyon). Aşağıdaki bölüm,
-# şifre sıfırlama gibi KRİTİK e-postaları Brevo servisi üzerinden GERÇEKTEN
-# gönderir. Brevo, HTTPS (443 portu) üzerinden çalıştığı için Render gibi
-# SMTP portlarını kısıtlayan platformlarda da sorunsuz iletim sağlar.
+# Brevo, HTTPS üzerinden çalışır; Render gibi SMTP'yi kısıtlayan ortamlarda
+# da iletim sağlar. Brevo yapılandırılmamışsa simülasyona düşülür.
 
 
 def _send_via_brevo(to_email: str, to_name: str, subject: str,
                     html_content: str) -> bool:
-    """
-    Brevo Transactional Email API'si ile gerçek bir e-posta gönderir.
-
-    API uç noktası: POST https://api.brevo.com/v3/smtp/email
-
-    Args:
-        to_email     : Alıcının e-posta adresi
-        to_name      : Alıcının adı (kişiselleştirme)
-        subject      : E-posta konusu
-        html_content : E-postanın HTML gövdesi
-
-    Returns:
-        bool: Gönderim başarılıysa True.
-
-    Raises:
-        Exception: Ağ hatası veya API hatası durumunda (çağıran taraf yakalar).
-    """
+    """Brevo API ile e-posta gönderir; hata durumunda istisna fırlatır."""
     url = "https://api.brevo.com/v3/smtp/email"
     headers = {
         "api-key": settings.brevo_api_key,
@@ -138,7 +120,6 @@ def _send_via_brevo(to_email: str, to_name: str, subject: str,
         "accept": "application/json",
     }
     payload = {
-        # Gönderen: Brevo panelinde doğrulanmış adres olmalıdır
         "sender": {
             "name": settings.brevo_sender_name,
             "email": settings.brevo_sender_email,
@@ -147,19 +128,13 @@ def _send_via_brevo(to_email: str, to_name: str, subject: str,
         "subject": subject,
         "htmlContent": html_content,
     }
-    # 15 sn zaman aşımı — Brevo yanıt vermezse sonsuza dek beklemeyiz
     response = httpx.post(url, json=payload, headers=headers, timeout=15.0)
-    # 2xx dışı bir durum kodu gelirse istisna fırlatılır
     response.raise_for_status()
     return True
 
 
 def _password_reset_html(full_name: str, reset_link: str) -> str:
-    """
-    Şifre sıfırlama e-postasının HTML gövdesini üretir.
-
-    Kurumsal görünümlü, butonlu ve mobil uyumlu basit bir şablon döndürür.
-    """
+    """Şifre sıfırlama e-postasının HTML gövdesini üretir."""
     return f"""\
 <!DOCTYPE html>
 <html lang="tr">
@@ -222,26 +197,14 @@ def _password_reset_html(full_name: str, reset_link: str) -> str:
 def send_password_reset_email(to_email: str, full_name: str,
                               reset_link: str) -> None:
     """
-    Kullanıcıya şifre sıfırlama e-postasını gönderir.
+    Şifre sıfırlama e-postasını gönderir.
 
-    Davranış:
-      • Brevo yapılandırılmışsa (api_key + sender_email tanımlı) e-posta
-        GERÇEKTEN gönderilir.
-      • Yapılandırılmamışsa veya Brevo hata verirse, akış bozulmaz: sıfırlama
-        linki sunucu log'una yazılır (simülasyon yedeği). Böylece geliştirme
-        ortamında da özellik test edilebilir.
-
-    Bu fonksiyon FastAPI BackgroundTasks ile çağrılır — kullanıcı bekletilmez.
-
-    Args:
-        to_email   : Alıcının e-posta adresi
-        full_name  : Kullanıcının tam adı
-        reset_link : Şifre sıfırlama sayfasının tam URL'i (token dahil)
+    Brevo yapılandırılmışsa gerçekten gönderir; değilse veya hata olursa
+    sıfırlama linkini log'a yazar (simülasyon yedeği).
     """
     subject = "KrediZeka — Şifre Sıfırlama Talebi"
     html = _password_reset_html(full_name, reset_link)
 
-    # Brevo yapılandırılmışsa gerçek gönderimi dene
     if settings.brevo_api_key and settings.brevo_sender_email:
         try:
             _send_via_brevo(to_email, full_name, subject, html)
@@ -252,14 +215,13 @@ def send_password_reset_email(to_email: str, full_name: str,
             )
             return
         except Exception as e:
-            # Brevo başarısız → akışı kesme, simülasyon yedeğine düş
             logger.error(
                 "❌ [ŞİFRE SIFIRLAMA] Brevo gönderimi başarısız (%s: %s). "
                 "Simülasyon yedeğine geçiliyor.",
                 type(e).__name__, e
             )
 
-    # Simülasyon yedeği: sıfırlama linkini log'a yaz (geliştirme/test için)
+    # Simülasyon yedeği: sıfırlama linkini log'a yaz
     logger.info(
         "📧 [ŞİFRE SIFIRLAMA — SİMÜLASYON] | Alıcı: %s | Ad: %s | "
         "SIFIRLAMA LİNKİ: %s",
